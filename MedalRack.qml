@@ -13,11 +13,15 @@ Column {
   readonly property int perRow: 4
   spacing: 3
 
+  // The daemon pushes a fresh array every two seconds: rebuild the ribbons
+  // only when their content changes.
+  readonly property string sig: JSON.stringify([medals || [], seasonMedals || []])
   readonly property var all: {
-    var s = (seasonMedals || []).map(function(m) {
+    var parsed = JSON.parse(sig)
+    var s = (parsed[1] || []).map(function(m) {
       return { name: m.name || ("Saison " + m.number), color: m.color, dot: m.dot, edges: m.edge || "none", dots: m.bars || 1, count: 1, star: true }
     })
-    return s.concat(medals || [])
+    return s.concat(parsed[0] || [])
   }
   readonly property var rows: {
     var l = all.slice()

@@ -26,6 +26,13 @@ for m in "$month" "$prev"; do
     gunzip -c "$tmp/dbip.mmdb.gz" > "$tmp/dbip.mmdb"
     mv "$tmp/dbip.mmdb" "$dest/dbip-city-lite.mmdb"
     echo "ok: $dest/dbip-city-lite.mmdb"
+    # A lookup, so this run also tests the reader.
+    python3 -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import mmdb
+r = mmdb.Reader(sys.argv[2])
+for ip in ("8.8.8.8", "1.1.1.1", "160.79.104.10"):
+    d = r.get(ip) or {}
+    l = d.get("location") or {}
+    print("test:", ip, (d.get("city") or {}).get("names", {}).get("en"), (d.get("country") or {}).get("iso_code"), l.get("latitude"), l.get("longitude"))' "$here" "$dest/dbip-city-lite.mmdb"
     exit 0
   fi
 done

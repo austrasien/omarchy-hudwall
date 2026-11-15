@@ -16,6 +16,8 @@ Item {
   readonly property real pixelScale: k * devicePixelRatio
 
   HudPalette { id: theme }
+  // On a low battery the HUD stays up but stops moving.
+  readonly property bool lowPower: sys.bat.status === "Discharging" && sys.bat.pct !== undefined && sys.bat.pct <= 15
   Sys { id: sys; active: hud.active }
   Prom { id: prom; active: hud.active }
 
@@ -29,8 +31,11 @@ Item {
     }
   }
 
+  // Hidden behind windows, nothing is drawn: the stage only renders while
+  // the HUD can be seen (the backdrop stays, for the gaps between windows).
   Item {
     id: stage
+    visible: hud.active
     width: 1440
     height: 960
     scale: hud.k
@@ -48,6 +53,14 @@ Item {
       opacity: 0.8
     }
 
+    Constellation {
+      x: 720 - 400; y: 448 - 400; width: 800; height: 800
+      pal: theme
+      pixelScale: hud.pixelScale
+      year: prom.year
+      season: prom.season
+    }
+
     PromLeft {
       x: 104; y: 28
       pal: theme; prom: prom
@@ -57,6 +70,7 @@ Item {
       x: 440; y: 28
       pal: theme; prom: prom; sys: sys
       active: hud.active
+      animate: hud.active && !hud.lowPower
       cfg: hud.cfg
       pixelScale: hud.pixelScale
     }
@@ -71,9 +85,20 @@ Item {
       pixelScale: hud.pixelScale
     }
 
+    Celebration {
+      anchors.fill: parent
+      pal: theme; prom: prom
+      active: hud.active
+    }
     Announcement {
       anchors.fill: parent
       pal: theme; prom: prom
+    }
+    HText {
+      visible: hud.lowPower
+      x: 720 - width / 2; y: 940
+      text: "BATTERIE FAIBLE · ANIMATIONS EN PAUSE"
+      color: theme.red; font.pixelSize: 9; font.letterSpacing: 2
     }
 
     HText {

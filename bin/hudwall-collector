@@ -25,6 +25,7 @@ sys.path.insert(0, HERE)
 HOME = os.path.expanduser("~")
 CONFIG = os.path.join(HOME, ".config/omarchy/hudwall.json")
 DATA = os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local/share"), "hudwall")
+STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".local/state"), "hudwall")
 CLK = os.sysconf("SC_CLK_TCK")
 PAGE = os.sysconf("SC_PAGE_SIZE")
 
@@ -370,9 +371,33 @@ def public(ip):
 class Peers:
     """The last ten public peers this machine opened a TCP connection to."""
 
+    PATH = os.path.join(STATE, "peers.json")
+
     def __init__(self):
         self.geo = Geo()
         self.seen = []  # newest first: {ip, port, proc, first, last, ...geo}
+        # The list outlives the collector, which only runs while the HUD shows.
+        try:
+            with open(self.PATH) as f:
+                self.seen = [p for p in json.load(f) if isinstance(p, dict) and "ip" in p][:10]
+            for p in self.seen:
+                p["live"] = False
+                if "lat" not in p:
+                    loc = self.geo.locate(p["ip"])
+                    if loc:
+                        p.update(loc)
+        except (OSError, ValueError):
+            pass
+
+    def save(self):
+        try:
+            os.makedirs(STATE, exist_ok=True)
+            tmp = self.PATH + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(self.seen, f)
+            os.replace(tmp, self.PATH)
+        except OSError:
+            pass
 
     def sample(self, now):
         try:
@@ -394,6 +419,7 @@ class Peers:
             m = re.search(r'users:\(\("([^"]+)"', line)
             live.setdefault(ip, (port, m.group(1) if m else ""))
         index = {p["ip"]: p for p in self.seen}
+        changed = False
         for ip, (port, proc) in live.items():
             if ip in index:
                 index[ip]["last"] = now
@@ -405,10 +431,13 @@ class Peers:
             if loc:
                 entry.update(loc)
             self.seen.insert(0, entry)
+            changed = True
         for p in self.seen:
             if p["ip"] not in live:
                 p["live"] = False
         self.seen = self.seen[:10]
+        if changed:
+            self.save()
         return {"geo": self.geo.reader is not None, "list": self.seen}
 
 

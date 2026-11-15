@@ -49,6 +49,7 @@ keeps stale sibling components.
 | `home` | `[2.35, 48.85]` | `[lon, lat]` where the arcs start |
 | `fps` | `24` | globe frame rate while seen (5–60) |
 | `pingPeers` | first 3 online | Tailscale host names to ping for latency |
+| `places` | `{}` | named points always on the globe, `{ "forge": [lon, lat] }`, lit when Tailscale sees that host |
 
 ## IPC
 
@@ -62,11 +63,16 @@ Clicks on Prometheus panels open the matching tab of the bar panel through
 
 ## Cost
 
-Measured on a Framework 13 (Ryzen AI 300, 2304 × 1536 logical): the shell
-uses about 4 % of a core with the HUD covered, about 20 % while it is seen
-at 24 fps with eight arcs. The globe is a fragment shader
-(`shaders/globe.frag`, compiled with
-`/usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o shaders/globe.frag.qsb shaders/globe.frag`).
+Measured on a Framework 13 (Ryzen AI 300, 2304 × 1536 logical), whole
+shell process: about 4 % of a core with the HUD disabled, about 13 % with the
+HUD on screen at 24 fps (no GeoIP yet, so no arcs). In the preview window,
+eight arcs added about 5 %. Covered by windows, the stage is not drawn and the
+collector is stopped. The globe is a fragment shader (`shaders/globe.frag`,
+compiled with
+`/usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o shaders/globe.frag.qsb shaders/globe.frag`);
+animated Canvases were far too costly (arcs alone: about 57 % of a core).
+
+On battery at 15 % or less, the HUD stops moving.
 
 ## Layout
 

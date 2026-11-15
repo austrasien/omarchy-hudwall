@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 // Prometheus for the HUD: the pushed state through the plugin's own client
 // (../austraz.prometheus/Prometheus.qml, idle reporting off: the bar does
@@ -91,15 +92,16 @@ Item {
         var next = Object.assign({}, prom.boards)
         next[b] = d
         prom.boards = next
+        if (b === "days") prom.bestDayTimeline()
       })
     })
     call("achievements:list", [], function(d) { prom.achievements = d })
     call("stats:extra", [], function(d) { prom.extra = d })
     call("stats:coffee", [], function(d) { prom.coffeeStats = d })
     call("sessions:names", [], function(d) { prom.names = d })
-    call("stats:days", [-1], function(d) { prom.lastWeek = d })
+    call("stats:days", [1], function(d) { prom.lastWeek = d })
     call("stats:timeline", [{ fromMs: dayStart(-1), toMs: dayStart(-1) + (Date.now() - dayStart(0)) }], function(d) { prom.yesterday = d })
-    bestDayTimeline()
+    geek.running = true
   }
 
   // The best day by XP on the leaderboard, as a timeline, for the ghost race.
@@ -124,18 +126,34 @@ Item {
     onTriggered: {
       if (!prom.active || prom.yearWeek > 52) {
         stop()
-        if (prom.yearWeek > 52) prom.year = prom.yearAcc
+        if (prom.yearWeek > 52) { prom.year = prom.yearAcc; prom.lastYear = Date.now() }
         return
       }
       var w = prom.yearWeek
       prom.yearWeek++
-      prom.call("stats:days", [-w], function(d) {
+      prom.call("stats:days", [w], function(d) {
         prom.yearAcc = prom.yearAcc.concat((d.days || []).map(function(x) { return { date: x.date, focus: x.focusSeconds || 0 } }))
       })
     }
   }
 
   function refreshAll() { refreshFast(); refreshSlow() }
+
+  // Today's geek date, from Prometheus' own calendar (prometheus/geekdates.py
+  // in the repository the bar plugin is linked from).
+  property var geekDate: null     // [id, name, description, line] or null
+  readonly property string promPlugin: Qt.resolvedUrl("../austraz.prometheus").toString().replace(/^[a-z]+:\/\//, "")
+  Process {
+    id: geek
+    command: ["python3", "-I", "-c",
+      "import sys, os, json, datetime\n" +
+      "root = os.path.dirname(os.path.realpath(sys.argv[1]))\n" +
+      "sys.path.insert(0, root)\n" +
+      "from prometheus import geekdates\n" +
+      "print(json.dumps(geekdates.event_on(datetime.date.today())))",
+      prom.promPlugin]
+    stdout: StdioCollector { onStreamFinished: { try { prom.geekDate = JSON.parse(this.text) } catch (e) { prom.geekDate = null } } }
+  }
 
   onActiveChanged: if (active && live) { refreshFast(); if (Date.now() - lastSlow > 120000) { refreshSlow(); lastSlow = Date.now() } }
   property real lastSlow: 0
@@ -150,8 +168,8 @@ Item {
     onTriggered: { prom.refreshSlow(); prom.lastSlow = Date.now() }
   }
   Timer {
-    interval: 2000; running: prom.active && prom.live && Date.now() - prom.lastYear > 3600000
-    onTriggered: { prom.lastYear = Date.now(); prom.refreshYear() }
+    interval: 2000; repeat: true; running: prom.active && prom.live
+    onTriggered: if (!yearStep.running && Date.now() - prom.lastYear > 3600000) prom.refreshYear()
   }
   // After a toast or an action: refresh what may have moved.
   Timer { id: fast; interval: 600; onTriggered: if (prom.active) prom.refreshFast() }

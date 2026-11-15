@@ -54,9 +54,16 @@ Item {
     return [(12 - ut) * 15, dec]
   }
 
+  // Reloaded now and then until it exists (after bin/hudwall-fetch-data).
+  property int maskRev: 0
+  Timer {
+    interval: 20000; repeat: true
+    running: globe.active && mask.status !== Image.Ready
+    onTriggered: globe.maskRev++
+  }
   Image {
     id: mask
-    source: "file://" + globe.maskPath
+    source: "file://" + globe.maskPath + "?" + globe.maskRev
     visible: false
     cache: false
     smooth: false
@@ -118,7 +125,7 @@ Item {
       var dest = [pe.lon, pe.lat]
       var pts = []
       for (var k = 0; k <= 32; k++) pts.push(slerp(home, dest, k / 32))
-      out.push({ pts: pts, d: dist(home, dest), live: pe.live, dest: dest,
+      out.push({ pts: pts, d: dist(home, dest), live: pe.live, own: !!pe.own, dest: dest,
                  label: (pe.proc ? pe.proc + " · " : "") + (pe.city || pe.country || "") })
     }
     return out
@@ -165,7 +172,7 @@ Item {
       anchors.fill: parent
       readonly property var f: globe.frame[index] || null
       readonly property var p: globe.paths[index] || null
-      readonly property color tint: p && p.live ? globe.pal.acc : globe.pal.cyan
+      readonly property color tint: p && p.own ? globe.pal.acc2 : p && p.live ? globe.pal.acc : globe.pal.cyan
       Shape {
         anchors.fill: parent
         ShapePath {

@@ -12,6 +12,7 @@ Item {
   required property var prom
   required property var sys
   property bool active: false
+  property bool animate: active
   property var cfg: ({})
   property real pixelScale: 1
   property bool wantsKeyboard: false
@@ -56,7 +57,15 @@ Item {
       width: parent.width
       horizontalAlignment: Text.AlignHCenter
       text: Qt.locale("fr_FR").toString(new Date(), "dddd d MMMM yyyy").toUpperCase()
+        + (center.prom.geekDate ? "  ·  " + center.prom.geekDate[1].toUpperCase() : "")
       color: center.pal.dim; font.pixelSize: 9; font.letterSpacing: 3
+    }
+    HText {
+      visible: !!center.prom.geekDate
+      width: parent.width
+      horizontalAlignment: Text.AlignHCenter
+      text: center.prom.geekDate ? center.prom.geekDate[2] + " « " + center.prom.geekDate[3] + " »" : ""
+      color: center.pal.cyan; font.pixelSize: 9
     }
     Row {
       anchors.horizontalCenter: parent.horizontalCenter
@@ -117,10 +126,23 @@ Item {
     x: center.width / 2 - 210; y: 392 - 210
     width: 420; height: 420
     pixelScale: center.pixelScale
-    active: center.active
+    active: center.animate
     fps: center.cfg.fps || 24
     home: center.cfg.home || [2.35, 48.85]
-    peers: center.sys.peers.list || []
+    // The last peers, plus the places named in the config ({ name: [lon, lat] }),
+    // lit when Tailscale sees that host online.
+    peers: {
+      var out = (center.sys.peers.list || []).slice()
+      var places = center.cfg.places || {}
+      var tail = center.sys.tail.peers || []
+      Object.keys(places).forEach(function(name) {
+        var ll = places[name]
+        if (!Array.isArray(ll) || ll.length !== 2) return
+        var t = tail.filter(function(x) { return x.name === name })[0]
+        out.push({ lon: ll[0], lat: ll[1], city: name, proc: "", live: !t || t.online, own: true })
+      })
+      return out
+    }
   }
   HText {
     visible: !center.sys.peers.geo
@@ -162,8 +184,10 @@ Item {
       while (toastModel.count > 4) toastModel.remove(toastModel.count - 1)
     }
   }
+  // Toasts wait while the desk is covered, then stay 12 s once seen.
+  onActiveChanged: if (active) for (var i = 0; i < toastModel.count; i++) toastModel.setProperty(i, "at", Date.now())
   Timer {
-    interval: 1000; repeat: true; running: toastModel.count > 0
+    interval: 1000; repeat: true; running: toastModel.count > 0 && center.active
     onTriggered: {
       for (var i = toastModel.count - 1; i >= 0; i--)
         if (Date.now() - toastModel.get(i).at > 12000) toastModel.remove(i)
