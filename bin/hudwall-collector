@@ -1,0 +1,485 @@
+#!/usr/bin/env python3
+"""System readings for the HUD wallpaper, one JSON object per line.
+
+Runs only while the HUD is seen (the plugin starts and stops it). Every
+second it prints the sections that changed: cpu, mem, net and battery every
+second, processes every 3 s, the NPU every 2 s, network peers every 5 s,
+Tailscale and the Wi-Fi every 30 s, the battery's day every 5 min.
+
+Stdlib only. Nothing goes on the network but loopback calls to Lemonade
+and pings to the Tailscale peers named in the config.
+"""
+
+import ipaddress
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import urllib.request
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, HERE)
+
+HOME = os.path.expanduser("~")
+CONFIG = os.path.join(HOME, ".config/omarchy/hudwall.json")
+DATA = os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local/share"), "hudwall")
+CLK = os.sysconf("SC_CLK_TCK")
+PAGE = os.sysconf("SC_PAGE_SIZE")
+
+
+def read(path, default=""):
+    try:
+        with open(path) as f:
+            return f.read()
+    except OSError:
+        return default
+
+
+def config():
+    try:
+        with open(CONFIG) as f:
+            c = json.load(f)
+        return c if isinstance(c, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+# ----------------------------------------------------------------- cpu
+
+class Cpu:
+    def __init__(self):
+        self.prev = None
+        self.temp_path = None
+        for d in sorted(os.listdir("/sys/class/hwmon")):
+            if read(f"/sys/class/hwmon/{d}/name").strip() in ("k10temp", "coretemp", "zenpower"):
+                self.temp_path = f"/sys/class/hwmon/{d}/temp1_input"
+                break
+
+    def sample(self):
+        rows = {}
+        for line in read("/proc/stat").splitlines():
+            if not line.startswith("cpu"):
+                break
+            parts = line.split()
+            vals = list(map(int, parts[1:9]))
+            idle = vals[3] + vals[4]
+            rows[parts[0]] = (sum(vals), idle)
+        out = {}
+        if self.prev:
+            def use(k):
+                t0, i0 = self.prev.get(k, (0, 0))
+                t1, i1 = rows[k]
+                dt = t1 - t0
+                return 0.0 if dt <= 0 else max(0.0, min(1.0, 1 - (i1 - i0) / dt))
+            threads = sorted((k for k in rows if k != "cpu"), key=lambda k: int(k[3:]))
+            out["threads"] = [round(use(k), 3) for k in threads]
+            out["total"] = round(use("cpu"), 3)
+        self.prev = rows
+        freqs = []
+        i = 0
+        while True:
+            v = read(f"/sys/devices/system/cpu/cpu{i}/cpufreq/scaling_cur_freq")
+            if not v:
+                break
+            freqs.append(int(v))
+            i += 1
+        if freqs:
+            out["ghz"] = round(sum(freqs) / len(freqs) / 1e6, 2)
+        if self.temp_path:
+            t = read(self.temp_path).strip()
+            if t:
+                out["temp"] = round(int(t) / 1000)
+        return out
+
+
+def memory():
+    m = {}
+    for line in read("/proc/meminfo").splitlines():
+        k, _, v = line.partition(":")
+        m[k] = int(v.split()[0]) * 1024 if v.split() else 0
+    total = m.get("MemTotal", 0)
+    free = m.get("MemFree", 0)
+    cache = m.get("Cached", 0) + m.get("Buffers", 0) + m.get("SReclaimable", 0)
+    used = max(0, total - free - cache)
+    zram = 0
+    for d in os.listdir("/sys/block"):
+        if d.startswith("zram"):
+            f = read(f"/sys/block/{d}/mm_stat").split()
+            if len(f) > 2:
+                zram += int(f[2])
+    return {"total": total, "used": used, "cache": cache, "zram": zram, "free": free,
+            "swap": m.get("SwapTotal", 0) - m.get("SwapFree", 0)}
+
+
+# ----------------------------------------------------------------- net
+
+class Net:
+    def __init__(self):
+        self.prev = None
+        self.wifi = {}
+        self.wifi_at = 0
+
+    def iface(self):
+        for line in read("/proc/net/route").splitlines()[1:]:
+            f = line.split()
+            if len(f) > 2 and f[1] == "00000000":
+                return f[0]
+        return None
+
+    def sample(self, now):
+        name = self.iface()
+        out = {"iface": name}
+        counters = {}
+        for line in read("/proc/net/dev").splitlines()[2:]:
+            n, _, rest = line.partition(":")
+            f = rest.split()
+            counters[n.strip()] = (int(f[0]), int(f[8]))
+        if name and name in counters:
+            rx, tx = counters[name]
+            if self.prev and self.prev[0] == name:
+                dt = max(0.001, now - self.prev[3])
+                out["down"] = max(0, (rx - self.prev[1]) / dt)
+                out["up"] = max(0, (tx - self.prev[2]) / dt)
+            self.prev = (name, rx, tx, now)
+        if now - self.wifi_at > 30:
+            self.wifi_at = now
+            self.wifi = {}
+            try:
+                r = subprocess.run(["nmcli", "-t", "-f", "ACTIVE,SSID,FREQ", "dev", "wifi"],
+                                   capture_output=True, text=True, timeout=3)
+                for line in r.stdout.splitlines():
+                    if line.startswith("yes:"):
+                        parts = line.split(":")
+                        self.wifi = {"ssid": ":".join(parts[1:-1]), "mhz": int(re.sub(r"\D", "", parts[-1]) or 0)}
+                        break
+            except (OSError, subprocess.SubprocessError, ValueError):
+                pass
+        out.update(self.wifi)
+        return out
+
+
+# ------------------------------------------------------------- battery
+
+def battery():
+    root = "/sys/class/power_supply"
+    out = {}
+    for d in sorted(os.listdir(root)):
+        if read(f"{root}/{d}/type").strip() != "Battery" or read(f"{root}/{d}/scope").strip() == "Device":
+            continue
+        p = f"{root}/{d}"
+        cap = read(f"{p}/capacity").strip()
+        status = read(f"{p}/status").strip()
+        power = read(f"{p}/power_now").strip()
+        if power:
+            watts = int(power) / 1e6
+        else:
+            cur, volt = read(f"{p}/current_now").strip(), read(f"{p}/voltage_now").strip()
+            watts = int(cur) * int(volt) / 1e12 if cur and volt else 0
+        energy = read(f"{p}/energy_now").strip()
+        full = read(f"{p}/energy_full").strip()
+        left = None
+        if energy and watts > 0.3:
+            e = int(energy) / 1e6
+            if status == "Discharging":
+                left = e / watts * 3600
+            elif status == "Charging" and full:
+                left = (int(full) / 1e6 - e) / watts * 3600
+        out = {"name": d, "pct": int(cap) if cap else None, "status": status, "watts": round(watts, 2),
+               "left": round(left) if left else None,
+               "ac": any(read(f"{root}/{a}/online").strip() == "1" for a in os.listdir(root)
+                         if read(f"{root}/{a}/type").strip() == "Mains")}
+        break
+    return out
+
+
+def battery_day(name):
+    """The last 24 h from UPower's own history: [[t, pct], ...] and [[t, watts], ...]."""
+    out = {}
+    path = "/org/freedesktop/UPower/devices/battery_" + name
+    for kind in ("charge", "rate"):
+        try:
+            r = subprocess.run(["busctl", "--system", "--json=short", "call", "org.freedesktop.UPower", path,
+                                "org.freedesktop.UPower.Device", "GetHistory", "suu", kind, "86400", "200"],
+                               capture_output=True, text=True, timeout=4)
+            rows = json.loads(r.stdout)["data"][0]
+            out[kind] = sorted([[int(t), round(float(v), 2)] for t, v, _ in rows])
+        except (OSError, subprocess.SubprocessError, ValueError, KeyError, IndexError, TypeError):
+            pass
+    return out
+
+
+# ----------------------------------------------------------- processes
+
+GROUPS = [
+    (re.compile(r"^(brave|brave-browser|brave-origin)"), "Brave"),
+    (re.compile(r"^(chrome|chromium)"), "Chromium"),
+    (re.compile(r"^(firefox|Web Content|WebExtensions|Isolated Web|Socket Process|Privileged Cont|RDD Process|Utility Process)"), "Firefox"),
+    (re.compile(r"^claude"), "Claude"),
+    (re.compile(r"^(Hyprland|hyprland|quickshell|qs|omarchy-shell|owed|Xwayland)"), "Hyprland + shell"),
+    (re.compile(r"^(obsidian|Obsidian)"), "Obsidian"),
+    (re.compile(r"^(lemond|flm)"), "lemond (NPU)"),
+    (re.compile(r"^(pipewire|wireplumber|pipewire-pulse)"), "PipeWire"),
+    (re.compile(r"^(node|npm|bun|deno)"), "Node"),
+    (re.compile(r"^(python|python3)"), "Python"),
+]
+
+
+def group_of(comm):
+    for rx, name in GROUPS:
+        if rx.match(comm):
+            return name
+    return comm
+
+
+class Procs:
+    def __init__(self):
+        self.prev = {}
+        self.prev_t = None
+
+    def sample(self, now):
+        cur = {}
+        info = {}
+        for pid in os.listdir("/proc"):
+            if not pid.isdigit():
+                continue
+            s = read(f"/proc/{pid}/stat")
+            if not s:
+                continue
+            r = s.rfind(")")
+            comm = s[s.find("(") + 1:r]
+            f = s[r + 2:].split()
+            if f[1] == "2" or pid == "2":  # kernel threads
+                continue
+            ticks = int(f[11]) + int(f[12])
+            rss = int(f[21]) * PAGE
+            cur[pid] = ticks
+            info[pid] = (comm, f[1], rss)
+        out = None
+        if self.prev_t is not None:
+            dt = max(0.001, now - self.prev_t)
+            ncpu = os.cpu_count() or 1
+            groups = {}
+            for pid, ticks in cur.items():
+                comm, ppid, rss = info[pid]
+                g = group_of(comm)
+                d = ticks - self.prev.get(pid, ticks)
+                e = groups.setdefault(g, {"name": g, "cpu": 0.0, "rss": 0, "count": 0})
+                e["cpu"] += d / CLK / dt / ncpu
+                e["rss"] += rss
+                parent = info.get(ppid)
+                if not parent or group_of(parent[0]) != g:
+                    e["count"] += 1
+            top = sorted(groups.values(), key=lambda e: (e["cpu"], e["rss"]), reverse=True)[:6]
+            for e in top:
+                e["cpu"] = round(e["cpu"], 3)
+            out = top
+        self.prev, self.prev_t = cur, now
+        return out
+
+
+# ----------------------------------------------------------------- npu
+
+def http_json(url, timeout=0.6):
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        return json.loads(r.read(200000))
+
+
+def npu():
+    out = {}
+    try:
+        h = http_json("http://127.0.0.1:13305/api/v1/health")
+        models = h.get("all_models_loaded") or []
+        m = next((x for x in models if x.get("device") == "npu"), models[0] if models else None)
+        if m:
+            out["model"] = m.get("model_name") or m.get("checkpoint")
+            out["busy"] = bool(m.get("is_busy") or m.get("is_streaming"))
+        out["up"] = True
+    except Exception:
+        return {"up": False}
+    try:
+        s = http_json("http://127.0.0.1:13305/api/v1/stats")
+        out["tps"] = s.get("tokens_per_second")
+        out["requests"] = s.get("request_count_total")
+        out["outTokens"] = s.get("output_tokens_total")
+    except Exception:
+        pass
+    try:
+        q = http_json("http://127.0.0.1:13306/queue")
+        out["running"] = q.get("running") is not None
+        out["waiting"] = len(q.get("waiting") or [])
+    except Exception:
+        pass
+    return out
+
+
+# ------------------------------------------------------- network peers
+
+class Geo:
+    PATHS = ["dbip-city-lite.mmdb", "GeoLite2-City.mmdb"]
+
+    def __init__(self):
+        self.reader = None
+        self.cache = {}
+        for name in self.PATHS:
+            p = os.path.join(DATA, name)
+            if os.path.exists(p):
+                try:
+                    import mmdb
+                    self.reader = mmdb.Reader(p)
+                    break
+                except Exception as e:
+                    print(f"hudwall-collector: {p}: {e}", file=sys.stderr)
+
+    def locate(self, ip):
+        if not self.reader:
+            return None
+        if ip in self.cache:
+            return self.cache[ip]
+        loc = None
+        try:
+            r = self.reader.get(ip) or {}
+            l = r.get("location") or {}
+            if "latitude" in l and "longitude" in l:
+                city = ((r.get("city") or {}).get("names") or {}).get("en")
+                country = (r.get("country") or {}).get("iso_code")
+                loc = {"lat": l["latitude"], "lon": l["longitude"], "city": city, "country": country}
+        except Exception:
+            pass
+        if len(self.cache) > 2000:
+            self.cache.clear()
+        self.cache[ip] = loc
+        return loc
+
+
+def public(ip):
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    if a.version == 6 and a.ipv4_mapped:
+        a = a.ipv4_mapped
+    if a.is_private or a.is_loopback or a.is_link_local or a.is_multicast or a.is_reserved or a.is_unspecified:
+        return False
+    if a.version == 4 and a in ipaddress.ip_network("100.64.0.0/10"):
+        return False
+    return True
+
+
+class Peers:
+    """The last ten public peers this machine opened a TCP connection to."""
+
+    def __init__(self):
+        self.geo = Geo()
+        self.seen = []  # newest first: {ip, port, proc, first, last, ...geo}
+
+    def sample(self, now):
+        try:
+            r = subprocess.run(["ss", "-tnpH", "state", "established"], capture_output=True, text=True, timeout=3)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        live = {}
+        for line in r.stdout.splitlines():
+            f = line.split()
+            if len(f) < 4:
+                continue
+            peer = f[3]
+            ip, _, port = peer.rpartition(":")
+            ip = ip.strip("[]")
+            if "%" in ip:
+                ip = ip.split("%")[0]
+            if not public(ip):
+                continue
+            m = re.search(r'users:\(\("([^"]+)"', line)
+            live.setdefault(ip, (port, m.group(1) if m else ""))
+        index = {p["ip"]: p for p in self.seen}
+        for ip, (port, proc) in live.items():
+            if ip in index:
+                index[ip]["last"] = now
+                index[ip]["live"] = True
+                continue
+            entry = {"ip": ip, "port": int(port) if port.isdigit() else 0, "proc": group_of(proc) if proc else "",
+                     "first": now, "last": now, "live": True}
+            loc = self.geo.locate(ip)
+            if loc:
+                entry.update(loc)
+            self.seen.insert(0, entry)
+        for p in self.seen:
+            if p["ip"] not in live:
+                p["live"] = False
+        self.seen = self.seen[:10]
+        return {"geo": self.geo.reader is not None, "list": self.seen}
+
+
+class Tailnet:
+    def __init__(self):
+        self.lat = {}
+
+    def sample(self, cfg):
+        try:
+            r = subprocess.run(["tailscale", "status", "--json"], capture_output=True, text=True, timeout=4)
+            d = json.loads(r.stdout)
+        except (OSError, subprocess.SubprocessError, ValueError):
+            return {"up": False}
+        peers = []
+        for p in (d.get("Peer") or {}).values():
+            ips = p.get("TailscaleIPs") or []
+            peers.append({"name": p.get("HostName") or p.get("DNSName", "").split(".")[0], "online": bool(p.get("Online")),
+                          "direct": bool(p.get("CurAddr")), "relay": p.get("Relay") or "", "ip": ips[0] if ips else ""})
+        want = cfg.get("pingPeers")
+        if not isinstance(want, list):
+            want = [p["name"] for p in peers if p["online"]][:3]
+        for p in peers:
+            if p["name"] in want and p["online"] and p["ip"]:
+                try:
+                    r = subprocess.run(["ping", "-c1", "-W1", "-q", p["ip"]], capture_output=True, text=True, timeout=3)
+                    m = re.search(r"= [\d.]+/([\d.]+)/", r.stdout)
+                    p["ms"] = round(float(m.group(1))) if m else None
+                except (OSError, subprocess.SubprocessError):
+                    p["ms"] = None
+        peers.sort(key=lambda p: (p["name"] not in want, not p["online"], p["name"]))
+        return {"up": d.get("BackendState") == "Running", "relay": (d.get("Self") or {}).get("Relay", ""), "peers": peers[:6]}
+
+
+# ---------------------------------------------------------------- main
+
+def emit(obj):
+    sys.stdout.write(json.dumps(obj, separators=(",", ":")) + "\n")
+    sys.stdout.flush()
+
+
+def main():
+    cpu, net, procs, peers, tail = Cpu(), Net(), Procs(), Peers(), Tailnet()
+    cfg = config()
+    tick = 0
+    bat_name = None
+    while True:
+        now = time.time()
+        out = {"t": round(now, 3), "cpu": cpu.sample(), "mem": memory(), "net": net.sample(now), "bat": battery()}
+        bat_name = out["bat"].get("name") or bat_name
+        if tick % 3 == 0:
+            p = procs.sample(now)
+            if p is not None:
+                out["procs"] = p
+        if tick % 2 == 0:
+            out["npu"] = npu()
+        if tick % 5 == 0:
+            p = peers.sample(now)
+            if p is not None:
+                out["peers"] = p
+        if tick % 30 == 0:
+            cfg = config()
+            out["tail"] = tail.sample(cfg)
+        if tick % 300 == 0 and bat_name:
+            out["batDay"] = battery_day(bat_name)
+        emit(out)
+        tick += 1
+        time.sleep(max(0.05, 1 - (time.time() - now)))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (KeyboardInterrupt, BrokenPipeError):
+        pass

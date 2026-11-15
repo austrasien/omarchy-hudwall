@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Downloads the two public datasets the HUD uses, into ~/.local/share/hudwall:
+#   - land.png: the globe's land mask, built from Natural Earth's 1:110m
+#     land (via the world-atlas npm package, public domain);
+#   - dbip-city-lite.mmdb: DB-IP's free IP-to-city database (CC BY 4.0),
+#     to place network peers on the globe. Lookups stay local.
+# Run it once, then again now and then to refresh the IP database.
+set -euo pipefail
+
+dest="${XDG_DATA_HOME:-$HOME/.local/share}/hudwall"
+here="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+mkdir -p "$dest"
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+echo "land: world-atlas land-110m"
+curl -fsSL --max-time 60 -o "$tmp/land-110m.json" https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json
+python3 "$here/hudwall-land" "$tmp/land-110m.json" "$dest/land.png"
+
+month="$(date +%Y-%m)"
+prev="$(date -d "$(date +%Y-%m-01) -1 month" +%Y-%m)"
+for m in "$month" "$prev"; do
+  url="https://download.db-ip.com/free/dbip-city-lite-$m.mmdb.gz"
+  echo "geoip: $url"
+  if curl -fsSL --max-time 600 -o "$tmp/dbip.mmdb.gz" "$url"; then
+    gunzip -c "$tmp/dbip.mmdb.gz" > "$tmp/dbip.mmdb"
+    mv "$tmp/dbip.mmdb" "$dest/dbip-city-lite.mmdb"
+    echo "ok: $dest/dbip-city-lite.mmdb"
+    exit 0
+  fi
+done
+echo "geoip: download failed (the globe still works, peers stay unplaced)" >&2
+exit 1
