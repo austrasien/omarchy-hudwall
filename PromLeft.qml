@@ -27,8 +27,8 @@ Item {
     id: leaguePanel
     pal: col.pal
     width: 330; height: 232
-    label: "Ligue"
-    note: col.prom.league ? col.prom.league.daysLeft + " j restants" : ""
+    label: "League"
+    note: col.prom.league ? col.prom.league.daysLeft + " days left" : ""
     tab: "leagues"
 
     readonly property var lg: col.prom.league
@@ -74,15 +74,15 @@ Item {
           font.pixelSize: 22; font.weight: Font.DemiBold; font.letterSpacing: 1
         }
         HText {
-          text: leaguePanel.lg ? "ligue " + (leaguePanel.lg.league + 1) + " / " + col.prom.leagues.length
-                + " · rang " + leaguePanel.myRank + " / " + leaguePanel.players.length : ""
+          text: leaguePanel.lg ? "league " + (leaguePanel.lg.league + 1) + " / " + col.prom.leagues.length
+                + " · rank " + leaguePanel.myRank + " / " + leaguePanel.players.length : ""
           color: col.pal.dim
         }
         Item {
           width: rivalText.implicitWidth; height: rivalText.implicitHeight
           HText {
             id: rivalText
-            text: leaguePanel.rival ? (leaguePanel.myRank > 1 ? "rival · " : "poursuivant · ") + leaguePanel.rival.name : ""
+            text: leaguePanel.rival ? (leaguePanel.myRank > 1 ? "rival · " : "chaser · ") + leaguePanel.rival.name : ""
             color: col.pal.fg
           }
           Rectangle { anchors.top: rivalText.bottom; width: rivalText.width; height: 1; color: col.pal.alpha(col.pal.cyan, 0.5) }
@@ -114,7 +114,7 @@ Item {
                 text: leaguePanel.rival && leaguePanel.rival.bio ? leaguePanel.rival.bio.line : ""
                 color: col.pal.dim
               }
-              HText { text: "clic : lire la bio"; color: col.pal.mut; font.pixelSize: 9 }
+              HText { text: "click: read the bio"; color: col.pal.mut; font.pixelSize: 9 }
             }
           }
         }
@@ -178,8 +178,8 @@ Item {
       HText {
         y: 24
         text: leaguePanel.lg ? leaguePanel.lg.xp + " XP"
-          + (leaguePanel.lg.toPromotion > 0 ? " · promotion à +" + leaguePanel.lg.toPromotion : " · zone de promotion")
-          + (leaguePanel.lg.zone === "relegation" && leaguePanel.lg.toSafety > 0 ? " · sauvé à +" + leaguePanel.lg.toSafety : "")
+          + (leaguePanel.lg.toPromotion > 0 ? " · promotion at +" + leaguePanel.lg.toPromotion : " · promotion zone")
+          + (leaguePanel.lg.zone === "relegation" && leaguePanel.lg.toSafety > 0 ? " · safe at +" + leaguePanel.lg.toSafety : "")
           : ""
         color: leaguePanel.lg && leaguePanel.lg.zone === "relegation" ? col.pal.red : col.pal.dim
         font.pixelSize: 9
@@ -227,7 +227,7 @@ Item {
           HText {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: -11
-            text: "DLMMJVS".charAt(new Date(day.modelData.date + "T12:00:00").getDay())
+            text: "SMTWTFS".charAt(new Date(day.modelData.date + "T12:00:00").getDay())
             color: col.pal.mut; font.pixelSize: 8
           }
         }
@@ -241,8 +241,8 @@ Item {
     pal: col.pal
     y: 244; width: 330; height: 122
     readonly property var s: col.prom.season
-    label: s ? "Saison " + s.number + " · " + s.label : "Saison"
-    note: s ? Math.max(0, Math.ceil((new Date(s.end + "T23:59:59") - Date.now()) / 86400000)) + " j restants" : ""
+    label: s ? "Season " + s.number + " · " + s.label : "Season"
+    note: s ? Math.max(0, Math.ceil((new Date(s.end + "T23:59:59") - Date.now()) / 86400000)) + " days left" : ""
     tab: "seasons"
 
     Row {
@@ -281,7 +281,7 @@ Item {
         spacing: 6
         Row {
           width: parent.width
-          HText { width: parent.width - gradeText.width; text: seasonPanel.s ? (seasonPanel.s.grade ? "NOTE" : "EN COURS · " + col.fmtH((seasonPanel.s.hours || 0) * 3600)) : ""; color: col.pal.mut; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
+          HText { width: parent.width - gradeText.width; text: seasonPanel.s ? (seasonPanel.s.grade ? "GRADE" : "RUNNING · " + col.fmtH((seasonPanel.s.hours || 0) * 3600)) : ""; color: col.pal.mut; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
           HText {
             id: gradeText
             text: seasonPanel.s ? (seasonPanel.s.grade || (seasonPanel.s.bars >= 2 ? "A" : seasonPanel.s.bars >= 1 ? "B" : "—")) : "—"
@@ -299,7 +299,7 @@ Item {
           ] : []
         }
         HText {
-          text: seasonPanel.s ? seasonPanel.s.xp + " / " + seasonPanel.s.goal + " XP (1 barre) · " + seasonPanel.s.hardGoal + " (2)" : ""
+          text: seasonPanel.s ? seasonPanel.s.xp + " / " + seasonPanel.s.goal + " XP (1 bar) · " + seasonPanel.s.hardGoal + " (2)" : ""
           color: col.pal.dim; font.pixelSize: 9
         }
       }
@@ -311,15 +311,15 @@ Item {
     id: boardsPanel
     pal: col.pal
     y: 378; width: 330; height: 130
-    label: "Classements"
-    note: "actuel / record"
+    label: "Leaderboards"
+    note: "now / record"
     tab: "leaderboard"
 
     readonly property var rows: [
-      { key: "days", name: "Meilleur jour" },
-      { key: "weeks", name: "Meilleure semaine" },
-      { key: "sessions", name: "Meilleure session" },
-      { key: "quests", name: "Meilleure quête" }
+      { key: "days", name: "Best day" },
+      { key: "weeks", name: "Best week" },
+      { key: "sessions", name: "Best session" },
+      { key: "quests", name: "Best quest" }
     ]
     Column {
       width: parent.width
@@ -350,7 +350,7 @@ Item {
         }
       }
       HText {
-        text: col.prom.boards.days && col.prom.boards.days.you ? "aujourd'hui : rang " + col.prom.boards.days.you.rank + " / " + col.prom.boards.days.count : ""
+        text: col.prom.boards.days && col.prom.boards.days.you ? "today: rank " + col.prom.boards.days.you.rank + " / " + col.prom.boards.days.count : ""
         color: col.pal.mut; font.pixelSize: 9
       }
     }
@@ -361,8 +361,8 @@ Item {
     id: questPanel
     pal: col.pal
     y: 520; width: 330; height: 192
-    label: "Quêtes · succès"
-    note: col.prom.questList ? (col.prom.questList.quests || []).length + " ouvertes" : ""
+    label: "Quests · achievements"
+    note: col.prom.questList ? (col.prom.questList.quests || []).length + " open" : ""
     tab: "quests"
 
     readonly property var open: col.prom.questList ? (col.prom.questList.quests || []).slice().sort(function(a, b) { return (b.active ? 1 : 0) - (a.active ? 1 : 0) }).slice(0, 3) : []
@@ -398,7 +398,7 @@ Item {
           HText {
             visible: !qhover.hovered
             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-            text: qrow.modelData.kind === "daily" ? "quotidienne" : (qrow.modelData.daysWorked || 0) + " j"
+            text: qrow.modelData.kind === "daily" ? "daily" : (qrow.modelData.daysWorked || 0) + " d"
             color: qrow.modelData.active ? col.pal.mag : col.pal.mut; font.pixelSize: 9
           }
           Row {
@@ -407,18 +407,18 @@ Item {
             spacing: 4
             HButton {
               pal: col.pal; tone: qrow.modelData.active ? "g" : "c"; size: 8
-              text: qrow.modelData.active ? "de côté" : "activer"
+              text: qrow.modelData.active ? "set aside" : "activate"
               onClicked: col.prom.act(qrow.modelData.active ? "quests:deactivate" : "quests:activate", [qrow.modelData.id])
             }
             HButton {
-              pal: col.pal; size: 8; text: "terminer"
+              pal: col.pal; size: 8; text: "complete"
               onClicked: col.prom.act("quests:complete", [qrow.modelData.id])
             }
           }
         }
       }
       HText {
-        text: "+ nouvelle quête"
+        text: "+ new quest"
         color: col.pal.mut; font.pixelSize: 9
         MouseArea {
           anchors.fill: parent
@@ -447,7 +447,7 @@ Item {
           }
           return best
         }
-        HText { width: 110; text: "Prochain palier"; color: col.pal.dim; anchors.verticalCenter: parent.verticalCenter }
+        HText { width: 110; text: "Next tier"; color: col.pal.dim; anchors.verticalCenter: parent.verticalCenter }
         HBar {
           pal: col.pal; x: 116; width: 80; anchors.verticalCenter: parent.verticalCenter
           color: col.pal.acc2; value: parent.next ? parent.next.pr : 0

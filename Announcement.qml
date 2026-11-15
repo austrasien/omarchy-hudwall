@@ -35,13 +35,13 @@ Item {
     HText {
       anchors.horizontalCenter: parent.horizontalCenter
       text: !ann.a ? "" : ann.a.kind === "league"
-        ? "FIN DE SEMAINE · " + (ann.a.outcome === "up" ? "PROMOTION" : ann.a.outcome === "down" ? "RELÉGATION" : "MAINTIEN")
-        : "FIN DE SAISON · " + (ann.a.label || "")
+        ? "END OF WEEK · " + (ann.a.outcome === "up" ? "PROMOTED" : ann.a.outcome === "down" ? "RELEGATED" : "STAYED")
+        : "END OF SEASON · " + (ann.a.label || "")
       color: ann.pal.dim; font.pixelSize: 11; font.letterSpacing: 6
     }
     HText {
       anchors.horizontalCenter: parent.horizontalCenter
-      text: !ann.a ? "" : ann.a.kind === "league" ? (ann.a.after ? ann.a.after.name.toUpperCase() : "") : (ann.grade ? "NOTE " + ann.grade : "SAISON TERMINÉE")
+      text: !ann.a ? "" : ann.a.kind === "league" ? (ann.a.after ? ann.a.after.name.toUpperCase() : "") : (ann.grade ? "GRADE " + ann.grade : "SEASON OVER")
       color: ann.tint
       font.pixelSize: 60; font.letterSpacing: 18; font.weight: Font.DemiBold
       style: Text.Raised; styleColor: Qt.rgba(ann.tint.r, ann.tint.g, ann.tint.b, 0.4)
@@ -49,8 +49,8 @@ Item {
     HText {
       anchors.horizontalCenter: parent.horizontalCenter
       text: !ann.a ? "" : ann.a.kind === "league"
-        ? "rang " + ann.a.rank + " · " + ann.a.xp + " XP" + (ann.a.before ? " · avant : " + ann.a.before.name : "")
-        : ann.a.xp + " XP · objectifs " + ann.a.goal + " / " + ann.a.hardGoal + " · " + ann.a.bars + " barre(s)"
+        ? "rank " + ann.a.rank + " · " + ann.a.xp + " XP" + (ann.a.before ? " · before: " + ann.a.before.name : "")
+        : ann.a.xp + " XP · goals " + ann.a.goal + " / " + ann.a.hardGoal + " · " + ann.a.bars + " bar(s)"
       color: ann.pal.fg; font.pixelSize: 12
     }
     HButton {

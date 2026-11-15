@@ -47,7 +47,7 @@ Item {
     id: ghost
     pal: row.pal
     width: 240; height: 176
-    label: "Course fantôme"
+    label: "Ghost race"
     note: "vs record"
     tab: "stats"
 
@@ -86,8 +86,8 @@ Item {
       readonly property real t: ghost.today.length ? ghost.today[ghost.today.length - 1] : 0
       readonly property real b: ghost.best.length ? ghost.best[Math.min(ghost.best.length - 1, ghost.today.length - 1)] || 0 : 0
       readonly property real y2: ghost.yest.length ? ghost.yest[ghost.yest.length - 1] : 0
-      text: "aujourd'hui " + row.hm(t * 3600) + " · " + (t >= b ? "+" : "−") + row.hm(Math.abs(t - b) * 3600) + " vs record · "
-        + (t >= y2 ? "+" : "−") + row.hm(Math.abs(t - y2) * 3600) + " vs hier"
+      text: "today " + row.hm(t * 3600) + " · " + (t >= b ? "+" : "−") + row.hm(Math.abs(t - b) * 3600) + " vs record · "
+        + (t >= y2 ? "+" : "−") + row.hm(Math.abs(t - y2) * 3600) + " vs yesterday"
       color: row.pal.dim; font.pixelSize: 8
     }
   }
@@ -97,8 +97,8 @@ Item {
     id: quality
     pal: row.pal
     x: 248; width: 240; height: 176
-    label: "Qualité focus"
-    note: "aujourd'hui"
+    label: "Focus quality"
+    note: "today"
     tab: "stats"
 
     readonly property var ins: row.prom.insights ? row.prom.insights.today : null
@@ -109,12 +109,12 @@ Item {
     Row {
       spacing: 6
       HText { text: Math.round(quality.share * 100); color: row.pal.fg; font.pixelSize: 22; font.weight: Font.DemiBold }
-      HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 4; text: "% du temps suivi en session"; color: row.pal.mut; font.pixelSize: 9 }
+      HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 4; text: "% of tracked time in session"; color: row.pal.mut; font.pixelSize: 9 }
     }
     HText {
       y: 32; width: parent.width
-      text: "flow " + (quality.sw !== null ? Math.round(quality.sw) : "–") + " chgts/h · sessions 2 h+ "
-        + (row.prom.summary ? row.prom.summary.deepSessions : 0) + " · médiane " + (row.prom.extra ? row.prom.extra.focus.medianMinutes : "–") + " min"
+      text: "flow " + (quality.sw !== null ? Math.round(quality.sw) : "–") + " switches/h · 2 h+ sessions "
+        + (row.prom.summary ? row.prom.summary.deepSessions : 0) + " · median " + (row.prom.extra ? row.prom.extra.focus.medianMinutes : "–") + " min"
       color: row.pal.dim; font.pixelSize: 9
     }
     Spark {
@@ -129,11 +129,11 @@ Item {
     id: coffee
     pal: row.pal
     x: 496; width: 240; height: 176
-    label: "Caféine"
+    label: "Caffeine"
     tab: "stats"
     readonly property var cd: row.prom.coffeeDay
     readonly property var now: row.p && row.p.coffee ? row.p.coffee : (cd ? cd.coffee : null)
-    note: now ? now.cupsToday + (now.cupsToday > 1 ? " tasses" : " tasse") : ""
+    note: now ? now.cupsToday + (now.cupsToday === 1 ? " cup" : " cups") : ""
 
     HoverHandler { id: coffeeHover }
 
@@ -146,15 +146,15 @@ Item {
         HText {
           anchors.bottom: parent.bottom; anchors.bottomMargin: 4
           width: 170
-          text: "mg · " + (coffee.now && coffee.now.ideal && coffee.now.ideal.at ? "prochaine idéale " + row.clock(coffee.now.ideal.at) : (coffee.now && coffee.now.ideal ? coffee.now.ideal.reason : ""))
+          text: "mg · " + (coffee.now && coffee.now.ideal && coffee.now.ideal.at ? "next best at " + row.clock(coffee.now.ideal.at) : (coffee.now && coffee.now.ideal ? coffee.now.ideal.reason : ""))
           color: row.pal.mut; font.pixelSize: 9
         }
       }
       Row {
         visible: coffeeHover.hovered
         spacing: 6
-        HButton { pal: row.pal; text: "☕ +1 tasse"; onClicked: row.prom.act("coffee:add", []) }
-        HButton { pal: row.pal; tone: "g"; text: "annuler"; visible: coffee.now && coffee.now.canUndo; onClicked: row.prom.act("coffee:undo", []) }
+        HButton { pal: row.pal; text: "☕ +1 cup"; onClicked: row.prom.act("coffee:add", []) }
+        HButton { pal: row.pal; tone: "g"; text: "undo"; visible: coffee.now && coffee.now.canUndo; onClicked: row.prom.act("coffee:undo", []) }
       }
     }
     HiCanvas {
@@ -206,7 +206,7 @@ Item {
         var v = Math.round((cmp[k].with / cmp[k].without - 1) * 100)
         return (v >= 0 ? "+" : "") + v + " %"
       }
-      text: "avec café : " + pct("focus") + " focus · " + pct("tasks") + " tâches · " + pct("tokens") + " tokens"
+      text: "with coffee: " + pct("focus") + " focus · " + pct("tasks") + " tasks · " + pct("tokens") + " tokens"
       color: row.pal.dim; font.pixelSize: 8
     }
   }
@@ -215,7 +215,7 @@ Item {
   HPanel {
     pal: row.pal
     x: 744; width: 240; height: 176
-    label: "Réseau"
+    label: "Network"
     note: (row.sys.net.ssid || row.sys.net.iface || "") + (row.sys.net.mhz ? " · " + (row.sys.net.mhz > 5900 ? "6" : row.sys.net.mhz > 4000 ? "5" : "2,4") + " GHz" : "")
 
     Row {
@@ -233,7 +233,7 @@ Item {
       y: 88; width: parent.width
       spacing: 2
       HText {
-        text: "TAILSCALE " + (row.sys.tail.up ? "· relais " + (row.sys.tail.relay || "–") : "· arrêté")
+        text: "TAILSCALE " + (row.sys.tail.up ? "· relay " + (row.sys.tail.relay || "–") : "· stopped")
         color: row.pal.mut; font.pixelSize: 8; font.letterSpacing: 1
       }
       Flow {
@@ -257,9 +257,9 @@ Item {
     id: batt
     pal: row.pal
     x: 992; width: 240; height: 176
-    label: "Batterie"
+    label: "Battery"
     readonly property var b: row.sys.bat
-    note: b.left ? (b.status === "Charging" ? "pleine dans " : "") + row.hm(b.left) + (b.status === "Charging" ? "" : " restantes") : (b.status === "Full" ? "pleine" : b.ac ? "secteur" : "")
+    note: b.left ? (b.status === "Charging" ? "full in " : "") + row.hm(b.left) + (b.status === "Charging" ? "" : " left") : (b.status === "Full" ? "full" : b.ac ? "on AC" : "")
 
     Row {
       width: parent.width

@@ -28,8 +28,8 @@ Item {
     HText {
       width: parent.width; horizontalAlignment: Text.AlignHCenter
       text: block.session
-        ? (block.paused ? "EN PAUSE" : "SESSION") + " · " + (block.session.task || "sans nom").toUpperCase()
-        : "AUCUNE SESSION"
+        ? (block.paused ? "PAUSED" : "SESSION") + " · " + (block.session.task || "untitled").toUpperCase()
+        : "NO SESSION"
       color: block.session && !block.paused ? block.pal.acc : block.pal.dim
       font.pixelSize: 9; font.letterSpacing: 2.5
     }
@@ -51,7 +51,7 @@ Item {
         spacing: 8
         HButton {
           visible: !block.session
-          pal: block.pal; text: "▶ démarrer"; size: 10
+          pal: block.pal; text: "▶ start"; size: 10
           onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "startSession"])
         }
         Repeater {
@@ -65,19 +65,19 @@ Item {
         HButton {
           visible: !!block.session
           pal: block.pal
-          text: block.paused ? "▶ reprendre" : "❚❚ pause"
+          text: block.paused ? "▶ resume" : "❚❚ pause"
           onClicked: block.prom.act(block.paused ? "session:resume" : "session:pause", [])
         }
         HButton {
           visible: !!block.session
-          pal: block.pal; tone: "r"; text: "■ terminer"
+          pal: block.pal; tone: "r"; text: "■ end"
           enabled: !(block.challenge && block.challenge.state === "active")
           opacity: enabled ? 1 : 0.4
           onClicked: block.prom.act("session:end", ["manual"])
         }
         HButton {
           visible: !!(block.challenge && block.challenge.state === "active")
-          pal: block.pal; tone: "g"; text: "abandonner le défi"
+          pal: block.pal; tone: "g"; text: "abandon challenge"
           onClicked: block.prom.act("challenge:abandon", [])
         }
       }
@@ -91,7 +91,7 @@ Item {
         visible: !!block.challenge
         spacing: 6
         anchors.verticalCenter: parent.verticalCenter
-        HText { text: "DÉFIS"; color: block.pal.mut; font.pixelSize: 8; font.letterSpacing: 1.5 }
+        HText { text: "CHALLENGES"; color: block.pal.mut; font.pixelSize: 8; font.letterSpacing: 1.5 }
         Repeater {
           model: block.challenge ? block.challenge.max : 0
           HText {
@@ -100,7 +100,7 @@ Item {
             text: index < won ? "●"
               : index === won ? (block.challenge.state === "active"
                   ? "◐ " + block.p.formatDuration(block.challenge.remainingSeconds || 0)
-                  : "◌ offert")
+                  : "◌ offered")
               : "○"
             color: index < won ? block.pal.acc : index === won ? (block.challenge.state === "active" ? block.pal.acc2 : block.pal.cyan) : block.pal.mut
             font.pixelSize: 9
@@ -117,7 +117,7 @@ Item {
         HText {
           id: chipText
           anchors.centerIn: parent
-          text: "▤ TÂCHES " + block.openTasks.length + " · 🔒"
+          text: "▤ TASKS " + block.openTasks.length + " · 🔒"
           color: block.pal.dim; font.pixelSize: 8; font.letterSpacing: 1
         }
         HoverHandler { id: chipHover }
@@ -139,7 +139,7 @@ Item {
             spacing: 4
             HText {
               visible: !block.session
-              text: "Les tâches se cochent pendant une session."
+              text: "Tasks can be ticked during a session."
               color: block.pal.mut; font.pixelSize: 9
             }
             Repeater {
@@ -184,7 +184,7 @@ Item {
               HText {
                 visible: field.text.length === 0
                 y: 4
-                text: "+ ajouter une tâche (Entrée)"
+                text: "+ add a task (Enter)"
                 color: block.pal.mut
               }
               MouseArea {

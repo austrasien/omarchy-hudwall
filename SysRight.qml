@@ -15,10 +15,10 @@ Item {
   property real pixelScale: 1
   readonly property bool inSession: !!(prom.p && prom.p.running)
   readonly property var memParts: sys.mem.total ? [
-    { v: sys.mem.used, c: pal.acc, n: "utilisée" },
+    { v: sys.mem.used, c: pal.acc, n: "used" },
     { v: sys.mem.cache, c: pal.blue, n: "cache" },
     { v: sys.mem.zram, c: pal.mag, n: "zram" },
-    { v: sys.mem.free, c: pal.alpha(pal.fg, 0.15), n: "libre" }
+    { v: sys.mem.free, c: pal.alpha(pal.fg, 0.15), n: "free" }
   ] : []
 
   // ---------------------------------------------------------------- cpu
@@ -60,7 +60,7 @@ Item {
     }
     HText {
       anchors.bottom: parent.bottom
-      text: col.inSession ? "■ en session" : "■ hors session"
+      text: col.inSession ? "■ in session" : "■ out of session"
       color: col.inSession ? col.pal.acc : col.pal.blue; font.pixelSize: 9
     }
   }
@@ -69,8 +69,8 @@ Item {
   HPanel {
     pal: col.pal
     y: 180; width: 330; height: 124
-    label: "Mémoire"
-    note: col.sys.mem.total ? Math.round(col.sys.mem.total / 1073741824) + " Go" : ""
+    label: "Memory"
+    note: col.sys.mem.total ? Math.round(col.sys.mem.total / 1073741824) + " GB" : ""
 
     Row {
       spacing: 16
@@ -126,7 +126,7 @@ Item {
     pal: col.pal
     y: 316; width: 330; height: 116
     label: "NPU · Lemonade"
-    note: col.sys.npu.up ? (col.sys.npu.busy ? "en calcul" : "prêt") : "arrêté"
+    note: col.sys.npu.up ? (col.sys.npu.busy ? "busy" : "ready") : "stopped"
 
     HText {
       width: parent.width
@@ -148,8 +148,8 @@ Item {
     }
     HText {
       anchors.bottom: parent.bottom
-      text: "FILE " + (col.sys.npu.running ? "▮" : "▯") + "▮".repeat(Math.min(6, col.sys.npu.waiting || 0))
-        + " " + (col.sys.npu.waiting || 0) + " en attente · " + (col.sys.npu.requests || 0) + " requêtes"
+      text: "QUEUE " + (col.sys.npu.running ? "▮" : "▯") + "▮".repeat(Math.min(6, col.sys.npu.waiting || 0))
+        + " " + (col.sys.npu.waiting || 0) + " waiting · " + (col.sys.npu.requests || 0) + " requests"
       color: col.pal.dim; font.pixelSize: 9
     }
   }
@@ -191,7 +191,7 @@ Item {
     id: weekPanel
     pal: col.pal
     y: 574; width: 330; height: 138
-    label: "Semaine · focus"
+    label: "Week · focus"
     tab: "stats"
     readonly property var days: col.prom.week ? col.prom.week.days || [] : []
     readonly property real focusTotal: days.reduce(function(a, d) { return a + (d.focusSeconds || 0) }, 0)
@@ -211,7 +211,7 @@ Item {
             readonly property real span: 10 * 3600
             HText {
               width: 8
-              text: "DLMMJVS".charAt(new Date(modelData.date + "T12:00:00").getDay())
+              text: "SMTWTFS".charAt(new Date(modelData.date + "T12:00:00").getDay())
               color: modelData.date === (col.prom.p ? col.prom.p.todayDate : "") ? col.pal.fg : col.pal.mut
               font.pixelSize: 8
             }

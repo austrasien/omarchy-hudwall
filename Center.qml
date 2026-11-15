@@ -56,7 +56,7 @@ Item {
     HText {
       width: parent.width
       horizontalAlignment: Text.AlignHCenter
-      text: Qt.locale("fr_FR").toString(new Date(), "dddd d MMMM yyyy").toUpperCase()
+      text: Qt.locale("en_GB").toString(new Date(), "dddd d MMMM yyyy").toUpperCase()
         + (center.prom.geekDate ? "  ·  " + center.prom.geekDate[1].toUpperCase() : "")
       color: center.pal.dim; font.pixelSize: 9; font.letterSpacing: 3
     }
@@ -73,7 +73,7 @@ Item {
       readonly property var pr: center.p ? center.p.profile : null
       HText {
         anchors.verticalCenter: parent.verticalCenter
-        text: (center.p && center.p.handle ? "@" + center.p.handle + " · " : "") + "NIV " + (parent.pr ? parent.pr.level : "–")
+        text: (center.p && center.p.handle ? "@" + center.p.handle + " · " : "") + "LVL " + (parent.pr ? parent.pr.level : "–")
         color: center.pal.acc
       }
       HBar {
@@ -147,7 +147,7 @@ Item {
   HText {
     visible: !center.sys.peers.geo
     x: center.width / 2 - width / 2; y: 392 + 150
-    text: "base GeoIP absente · bin/hudwall-fetch-data"
+    text: "no GeoIP database · bin/hudwall-fetch-data"
     color: center.pal.mut; font.pixelSize: 8
   }
 
@@ -204,7 +204,7 @@ Item {
     readonly property real target: g && g.goal ? g.goal.hours * 3600 : 0
     HText {
       width: parent.width; horizontalAlignment: Text.AlignRight
-      text: "OBJECTIF · " + (parent.g && parent.g.goal ? ({ day: "JOUR", week: "SEMAINE", month: "MOIS" })[parent.g.goal.period] || "" : "")
+      text: "GOAL · " + (parent.g && parent.g.goal ? ({ day: "DAY", week: "WEEK", month: "MONTH" })[parent.g.goal.period] || "" : "")
       color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2
     }
     HText {
@@ -219,7 +219,7 @@ Item {
   Column {
     x: 0; y: 594; width: 140
     spacing: 2
-    HText { text: "AUJOURD'HUI PAR APP"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2 }
+    HText { text: "TODAY BY APP"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2 }
     Repeater {
       model: center.apps.slice(0, 5)
       Row {
@@ -242,14 +242,14 @@ Item {
       var d = (ins.today.focusSeconds || 0) - (ins.yesterdaySameTime.focusSeconds || 0)
       var t = (ins.today.trackedSeconds || 0) - (ins.yesterdaySameTime.trackedSeconds || 0)
       var v = d !== 0 ? d : t
-      return (v >= 0 ? "+" : "−") + center.hm(Math.abs(v)) + (d !== 0 ? " focus" : " suivi")
+      return (v >= 0 ? "+" : "−") + center.hm(Math.abs(v)) + (d !== 0 ? " focus" : " tracked")
     }
     HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: "INSIGHTS"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2 }
-    HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: "vs hier même heure " + parent.delta(); color: center.pal.dim; font.pixelSize: 9 }
+    HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: "vs yesterday same time " + parent.delta(); color: center.pal.dim; font.pixelSize: 9 }
     HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: parent.ins && parent.ins.topApp ? "top app " + parent.ins.topApp.app : ""; color: center.pal.dim; font.pixelSize: 9 }
     HText {
       width: parent.width; horizontalAlignment: Text.AlignRight
-      text: parent.ins && parent.ins.busiestDay ? "jour le plus chargé " + Qt.locale("fr_FR").toString(new Date(parent.ins.busiestDay.date + "T12:00:00"), "ddd d MMM") : ""
+      text: parent.ins && parent.ins.busiestDay ? "busiest day " + Qt.locale("en_GB").toString(new Date(parent.ins.busiestDay.date + "T12:00:00"), "ddd d MMM") : ""
       color: center.pal.dim; font.pixelSize: 9
     }
   }
@@ -266,14 +266,14 @@ Item {
     readonly property var q: {
       var p = center.p
       if (!p) return null
-      if (p.presence) return { k: "PRÉSENCE", q: "Encore là ?", b: [{ t: "oui", tone: "c", ch: "presence:confirm", a: [] }] }
+      if (p.presence) return { k: "PRESENCE", q: "Still there?", b: [{ t: "yes", tone: "c", ch: "presence:confirm", a: [] }] }
       if (p.challenge && p.challenge.state === "offered")
-        return { k: "DÉFI D'EXTENSION " + p.challenge.index + "/" + p.challenge.max, q: "+" + p.challenge.minutes + " min · +" + p.challenge.xp + " XP",
-                 b: [{ t: "accepter", tone: "c", ch: "challenge:accept", a: [p.challenge.id] }, { t: "refuser", tone: "g", ch: "challenge:decline", a: [p.challenge.id] }] }
-      if (p.breakNudge) return { k: "PAUSE", q: (p.breakNudge.workedMinutes ? p.breakNudge.workedMinutes + " min sans pause. " : "") + "Une pause ?",
-                                 b: [{ t: "pause", tone: "c", ch: "break:take", a: [] }, { t: "plus tard", tone: "g", ch: "break:later", a: [] }] }
-      if (p.coffeeNudge) return { k: "CAFÉ", q: "C'est le moment d'un café ?",
-                                  b: [{ t: "oui", tone: "c", ch: "coffee:nudgeOk", a: [] }, { t: "non", tone: "g", ch: "coffee:nudgeNo", a: [] }] }
+        return { k: "EXTENSION CHALLENGE " + p.challenge.index + "/" + p.challenge.max, q: "+" + p.challenge.minutes + " min · +" + p.challenge.xp + " XP",
+                 b: [{ t: "accept", tone: "c", ch: "challenge:accept", a: [p.challenge.id] }, { t: "decline", tone: "g", ch: "challenge:decline", a: [p.challenge.id] }] }
+      if (p.breakNudge) return { k: "PAUSE", q: (p.breakNudge.workedMinutes ? p.breakNudge.workedMinutes + " min without a break. " : "") + "Take a break?",
+                                 b: [{ t: "pause", tone: "c", ch: "break:take", a: [] }, { t: "later", tone: "g", ch: "break:later", a: [] }] }
+      if (p.coffeeNudge) return { k: "COFFEE", q: "Good time for a coffee?",
+                                  b: [{ t: "yes", tone: "c", ch: "coffee:nudgeOk", a: [] }, { t: "no", tone: "g", ch: "coffee:nudgeNo", a: [] }] }
       return null
     }
     Rectangle {

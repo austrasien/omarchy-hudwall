@@ -97,14 +97,14 @@ Item {
     HText {
       visible: hud.lowPower
       x: 720 - width / 2; y: 940
-      text: "BATTERIE FAIBLE · ANIMATIONS EN PAUSE"
+      text: "LOW BATTERY · ANIMATIONS PAUSED"
       color: theme.red; font.pixelSize: 9; font.letterSpacing: 2
     }
 
     HText {
       visible: !prom.live
       x: 720 - width / 2; y: 12
-      text: "PROMETHEUS HORS LIGNE"
+      text: "PROMETHEUS OFFLINE"
       color: theme.red; font.pixelSize: 9; font.letterSpacing: 2
     }
   }

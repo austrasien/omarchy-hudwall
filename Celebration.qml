@@ -32,17 +32,17 @@ Item {
   Connections {
     target: cel.prom
     function onToast(kind, title, text, rarity) {
-      if (kind === "medal") cel.push({ k: "MÉDAILLE", t: title, s: text, c: cel.pal.acc2 })
+      if (kind === "medal") cel.push({ k: "MEDAL", t: title, s: text, c: cel.pal.acc2 })
       else if (kind === "achievement" && (rarity === "epic" || rarity === "legendary"))
-        cel.push({ k: rarity === "legendary" ? "SUCCÈS LÉGENDAIRE" : "SUCCÈS ÉPIQUE", t: title, s: text, c: rarity === "legendary" ? cel.pal.acc2 : cel.pal.mag })
-      else if (kind === "won") cel.push({ k: "DÉFI GAGNÉ", t: title, s: text, c: cel.pal.cyan })
+        cel.push({ k: rarity === "legendary" ? "LEGENDARY ACHIEVEMENT" : "EPIC ACHIEVEMENT", t: title, s: text, c: rarity === "legendary" ? cel.pal.acc2 : cel.pal.mag })
+      else if (kind === "won") cel.push({ k: "CHALLENGE WON", t: title, s: text, c: cel.pal.cyan })
     }
   }
   // Level ups are not toasts: watch the level.
   property int lastLevel: -1
   readonly property int level: prom.p && prom.p.profile ? prom.p.profile.level : -1
   onLevelChanged: {
-    if (lastLevel > 0 && level > lastLevel) push({ k: "NIVEAU SUPÉRIEUR", t: "NIVEAU " + level, s: "", c: pal.acc })
+    if (lastLevel > 0 && level > lastLevel) push({ k: "LEVEL UP", t: "LEVEL " + level, s: "", c: pal.acc })
     if (level > 0) lastLevel = level
   }
 

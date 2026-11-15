@@ -19,7 +19,7 @@ Column {
   readonly property var all: {
     var parsed = JSON.parse(sig)
     var s = (parsed[1] || []).map(function(m) {
-      return { name: m.name || ("Saison " + m.number), color: m.color, dot: m.dot, edges: m.edge || "none", dots: m.bars || 1, count: 1, star: true }
+      return { name: m.name || ("Season " + m.number), color: m.color, dot: m.dot, edges: m.edge || "none", dots: m.bars || 1, count: 1, star: true }
     })
     return s.concat(parsed[0] || [])
   }
@@ -114,7 +114,7 @@ Column {
   HText {
     anchors.horizontalCenter: parent.horizontalCenter
     topPadding: 3
-    text: rack.all.length ? rack.all.length + " DÉCORATIONS · " + rack.attributions + " ATTRIBUTIONS" : "AUCUNE DÉCORATION"
+    text: rack.all.length ? rack.all.length + " DECORATIONS · " + rack.attributions + " AWARDS" : "NO DECORATIONS"
     color: rack.pal.mut; font.pixelSize: 8; font.letterSpacing: 1.5
   }
 }
