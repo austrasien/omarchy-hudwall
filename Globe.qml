@@ -142,7 +142,7 @@ Item {
       var segs = [], cur = [], screen = []
       for (var k = 0; k < a.pts.length; k++) {
         var pr = project(a.pts[k][0], a.pts[k][1])
-        var lift = 1 + Math.sin(Math.PI * k / (a.pts.length - 1)) * Math.min(0.06, a.d * 0.04)
+        var lift = 1 + Math.sin(Math.PI * k / (a.pts.length - 1)) * Math.min(0.18, a.d * 0.12)
         var q = Qt.point(cx + (pr[0] - cx) * lift, cy + (pr[1] - cy) * lift)
         screen.push([q, pr[2]])
         if (pr[2]) cur.push(q)

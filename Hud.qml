@@ -15,23 +15,24 @@ Item {
   readonly property real k: Math.min(width / 1440, height / 960)
   readonly property real pixelScale: k * devicePixelRatio
 
-  // The stage fills the screen, at least 1440 x 960 units. The side rails
-  // (the day tape on the left, the day bar on the right) are kept clear:
-  // cfg.margins = [left, right] in screen pixels.
+  // The stage fills the screen, at least 1440 x 960 units, with the same
+  // margin all around (`edge` units). cfg.margins = [left, right] adds room
+  // on a side, in screen pixels, if something covers it.
   readonly property real stageW: width / k
   readonly property real stageH: height / k
-  readonly property var margins: Array.isArray(cfg.margins) && cfg.margins.length === 2 ? cfg.margins : [40, 84]
-  readonly property real mL: margins[0] / k + 16
-  readonly property real mR: margins[1] / k + 16
+  readonly property var margins: Array.isArray(cfg.margins) && cfg.margins.length === 2 ? cfg.margins : [0, 0]
+  readonly property real edge: 28
+  readonly property real mL: margins[0] / k + edge
+  readonly property real mR: margins[1] / k + edge
   readonly property real avail: stageW - mL - mR
   readonly property real gap: 16
   readonly property real colW: Math.max(270, Math.min(300, avail * 0.21))
   readonly property real centerX: mL + colW + gap
   readonly property real centerW: avail - 2 * colW - 2 * gap
-  readonly property real bottomY: Math.max(756, stageH - 204)
+  readonly property real bottomY: stageH - edge - 176
   // Where the globe ends up, in stage units.
   readonly property real globeX: centerX + center.gx
-  readonly property real globeY: 28 + center.gy
+  readonly property real globeY: edge + center.gy
 
   HudPalette { id: theme }
   // On a low battery the HUD stays up but stops moving.
@@ -79,15 +80,15 @@ Item {
     }
 
     PromLeft {
-      x: hud.mL; y: 28
+      x: hud.mL; y: hud.edge
       width: hud.colW
       pal: theme; prom: prom; sys: sys
     }
     Center {
       id: center
-      x: hud.centerX; y: 28
+      x: hud.centerX; y: hud.edge
       width: hud.centerW
-      height: hud.bottomY - 28 - 10
+      height: hud.bottomY - hud.edge - 10
       pal: theme; prom: prom; sys: sys
       active: hud.active
       animate: hud.active && !hud.lowPower
@@ -95,7 +96,7 @@ Item {
       pixelScale: hud.pixelScale
     }
     SysRight {
-      x: hud.stageW - hud.mR - hud.colW; y: 28
+      x: hud.stageW - hud.mR - hud.colW; y: hud.edge
       width: hud.colW
       pal: theme; sys: sys; prom: prom
       pixelScale: hud.pixelScale

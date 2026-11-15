@@ -142,15 +142,15 @@ Item {
         Item {
           required property var modelData
           required property int index
-          width: 30; height: 14
+          width: (leaguePanel.width - 2 * leaguePanel.pad) / Math.max(1, col.prom.leagues.length); height: 14
           readonly property int cur: leaguePanel.lg ? leaguePanel.lg.league : -1
           Rectangle {
             visible: parent.index < col.prom.leagues.length - 1
-            x: 15; y: 6; width: 30; height: 1
+            x: parent.width / 2; y: 6; width: parent.width; height: 1
             color: parent.index < parent.cur ? col.pal.acc : col.pal.alpha(col.pal.fg, 0.15)
           }
           Rectangle {
-            x: 15 - width / 2; y: 7 - height / 2
+            x: parent.width / 2 - width / 2; y: 7 - height / 2
             width: parent.index === parent.cur ? 11 : 6; height: width; radius: width / 2
             color: parent.index <= parent.cur ? parent.modelData.color : col.pal.alpha(col.pal.fg, 0.12)
             border.width: parent.index === parent.cur ? 1 : 0
