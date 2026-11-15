@@ -23,6 +23,16 @@ Item {
   width: 560
   height: 728
 
+  // Geometry: a compact header, the session at the bottom, and the globe
+  // with its rings as big as the space between allows.
+  readonly property real headerH: prom.geekDate ? 74 : 62
+  readonly property real sessionY: height - 64
+  readonly property real areaTop: headerH + 4
+  readonly property real areaH: sessionY - 4 - areaTop
+  readonly property real gs: Math.max(0.6, Math.min(areaH, width - 10) / 540)
+  readonly property real gx: width / 2
+  readonly property real gy: areaTop + areaH / 2
+
   function hm(sec) {
     var s = Math.max(0, Math.round(sec || 0))
     var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60)
@@ -51,8 +61,9 @@ Item {
 
   // ------------------------------------------------------------ header
   Column {
-    x: 30; width: 500; y: 0
-    spacing: 8
+    id: header
+    x: 0; width: center.width; y: 0
+    spacing: 6
     HText {
       width: parent.width
       horizontalAlignment: Text.AlignHCenter
@@ -69,42 +80,47 @@ Item {
     }
     Row {
       anchors.horizontalCenter: parent.horizontalCenter
-      spacing: 8
-      readonly property var pr: center.p ? center.p.profile : null
-      HText {
+      spacing: 22
+      Column {
+        id: xpBlock
         anchors.verticalCenter: parent.verticalCenter
-        text: (center.p && center.p.handle ? "@" + center.p.handle + " · " : "") + "LVL " + (parent.pr ? parent.pr.level : "–")
-        color: center.pal.acc
-      }
-      HBar {
-        pal: center.pal
-        width: 240; anchors.verticalCenter: parent.verticalCenter
-        value: parent.pr && parent.pr.levelCost ? parent.pr.levelXp / parent.pr.levelCost : 0
-      }
-      HText {
-        anchors.verticalCenter: parent.verticalCenter
-        text: parent.pr ? parent.pr.levelXp + " / " + parent.pr.levelCost + " XP" : ""
-        color: center.pal.dim
-      }
-      HText {
-        anchors.verticalCenter: parent.verticalCenter
-        text: "⚙"
-        color: gearArea.containsMouse ? center.pal.acc : center.pal.dim
-        font.pixelSize: 12
-        MouseArea {
-          id: gearArea
-          anchors.fill: parent; anchors.margins: -4
-          hoverEnabled: true
-          cursorShape: Qt.PointingHandCursor
-          onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", "settings"])
+        spacing: 4
+        readonly property var pr: center.p ? center.p.profile : null
+        HText {
+          text: (center.p && center.p.handle ? "@" + center.p.handle + " · " : "") + "LVL " + (xpBlock.pr ? xpBlock.pr.level : "–")
+          color: center.pal.acc
+        }
+        HBar {
+          pal: center.pal
+          width: 200
+          value: xpBlock.pr && xpBlock.pr.levelCost ? xpBlock.pr.levelXp / xpBlock.pr.levelCost : 0
+        }
+        Row {
+          spacing: 8
+          HText {
+            text: xpBlock.pr ? xpBlock.pr.levelXp + " / " + xpBlock.pr.levelCost + " XP" : ""
+            color: center.pal.dim; font.pixelSize: 9
+          }
+          HText {
+            text: "⚙"
+            color: gearArea.containsMouse ? center.pal.acc : center.pal.dim
+            font.pixelSize: 11
+            MouseArea {
+              id: gearArea
+              anchors.fill: parent; anchors.margins: -4
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", "settings"])
+            }
+          }
         }
       }
-    }
-    MedalRack {
-      anchors.horizontalCenter: parent.horizontalCenter
-      pal: center.pal
-      medals: center.p ? center.p.medals : []
-      seasonMedals: center.p ? center.p.seasonMedals : []
+      MedalRack {
+        anchors.verticalCenter: parent.verticalCenter
+        pal: center.pal
+        medals: center.p ? center.p.medals : []
+        seasonMedals: center.p ? center.p.seasonMedals : []
+      }
     }
   }
 
@@ -112,9 +128,10 @@ Item {
   Rings {
     id: rings
     pal: center.pal
-    x: center.width / 2 - 270; y: 392 - 270
+    x: center.gx - 270; y: center.gy - 270
     width: 540; height: 540
-    pixelScale: center.pixelScale
+    scale: center.gs
+    pixelScale: center.pixelScale * center.gs
     year: center.prom.year
     timeline: center.prom.timeline
     appColors: center.appColors
@@ -123,9 +140,9 @@ Item {
   }
   Globe {
     pal: center.pal
-    x: center.width / 2 - 210; y: 392 - 210
+    x: center.gx - 210; y: center.gy - 210
     width: 420; height: 420
-    pixelScale: center.pixelScale
+    scale: center.gs
     active: center.animate
     fps: center.cfg.fps || 24
     home: center.cfg.home || [2.35, 48.85]
@@ -146,14 +163,14 @@ Item {
   }
   HText {
     visible: !center.sys.peers.geo
-    x: center.width / 2 - width / 2; y: 392 + 150
+    x: center.gx - width / 2; y: center.gy + 150 * center.gs
     text: "no GeoIP database · bin/hudwall-fetch-data"
     color: center.pal.mut; font.pixelSize: 8
   }
 
   // ------------------------------------------------------------ toasts
   Column {
-    x: 0; y: 128; width: 200
+    x: 0; y: center.areaTop + 6; width: 200
     spacing: 5
     Repeater {
       model: toastModel
@@ -197,7 +214,7 @@ Item {
   // ------------------------------------------------------------ hours goal
   Column {
     visible: center.prom.goal !== null
-    x: center.width - 150; y: 128; width: 150
+    x: center.width - 150; y: center.areaTop + 6; width: 150
     spacing: 3
     readonly property var g: center.prom.goal
     readonly property real worked: g && g.progress ? (g.progress.workedSeconds || 0) + (center.p ? center.p.elapsed : 0) : 0
@@ -217,7 +234,7 @@ Item {
 
   // ------------------------------------------------------------ apps today
   Column {
-    x: 0; y: 594; width: 140
+    x: 0; y: center.sessionY - 100; width: 140
     spacing: 2
     HText { text: "TODAY BY APP"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2 }
     Repeater {
@@ -234,7 +251,7 @@ Item {
 
   // ------------------------------------------------------------ insights
   Column {
-    x: center.width - 170; y: 594; width: 170
+    x: center.width - 170; y: center.sessionY - 100; width: 170
     spacing: 2
     readonly property var ins: center.prom.insights
     function delta() {
@@ -254,7 +271,7 @@ Item {
     }
   }
   MouseArea {
-    x: center.width - 170; y: 594; width: 170; height: 52
+    x: center.width - 170; y: center.sessionY - 100; width: 170; height: 52
     cursorShape: Qt.PointingHandCursor
     onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", "stats"])
   }
@@ -263,30 +280,30 @@ Item {
   // ------------------------------------------------------------ tooltips
   // Invisible hover zones over the pieces that are not panels.
   Item {
-    x: 30; y: 14; width: 500; height: 22
+    x: center.gx - 220; y: header.height - 50; width: 210; height: 48
     HoverTip {
       pal: center.pal; raiseTarget: center
-      tipWidth: 360; tipX: 70
+      tipWidth: 360
       text: "Your Prometheus level and the XP still needed for the next one. XP comes from focus (1 per 10 min), tasks, quests, challenges, medals, achievements and agent tokens. ⚙ opens Prometheus settings."
     }
   }
   Item {
-    x: center.width / 2 - 250; y: 392 - 250; width: 500; height: 500
+    x: center.gx - 250 * center.gs; y: center.gy - 250 * center.gs; width: 500 * center.gs; height: 500 * center.gs
     HoverTip {
       pal: center.pal; raiseTarget: center
-      tipWidth: 300; tipX: 100; tipY: 330
+      tipWidth: 300; tipX: parent.width / 2 - 150; tipY: parent.height * 0.62
       text: "Globe: the Earth lit by the real sun, turning once a minute. Arcs: the last 10 public servers this computer opened a connection to (orange = still connected), labelled app · city; white ring = home. Inner ring: today's 24 hours, coloured by the app in use. Outer ring: this year, one tick per day, brighter with more focus."
     }
   }
   Item {
-    x: 0; y: 594; width: 140; height: 100
+    x: 0; y: center.sessionY - 100; width: 140; height: 100
     HoverTip {
       pal: center.pal; raiseTarget: center; above: true; tipWidth: 260
       text: "Time spent in each app today, as tracked by Prometheus. The colours match the 24-hour ring."
     }
   }
   Item {
-    x: center.width - 170; y: 594; width: 170; height: 52
+    x: center.width - 170; y: center.sessionY - 100; width: 170; height: 52
     HoverTip {
       pal: center.pal; raiseTarget: center; above: true; tipWidth: 260; tipX: -90
       text: "Today against yesterday at the same hour (focus, or tracked time if no focus yet), your most used app today, and your busiest day. Click: Stats tab."
@@ -294,7 +311,7 @@ Item {
   }
   Item {
     visible: center.prom.goal !== null
-    x: center.width - 150; y: 128; width: 150; height: 40
+    x: center.width - 150; y: center.areaTop + 6; width: 150; height: 40
     HoverTip {
       pal: center.pal; raiseTarget: center; tipWidth: 240; tipX: -90
       text: "Your focus-hours goal for the day, week or month (set in Prometheus settings) and the time done so far."
@@ -304,7 +321,7 @@ Item {
   // ------------------------------------------------------------ question card
   Item {
     id: ask
-    x: center.width / 2 - 160; y: 462; width: 320; height: 70
+    x: center.gx - 160; y: center.gy + 42 * center.gs; width: 320; height: 70
     readonly property var q: {
       var p = center.p
       if (!p) return null
@@ -354,7 +371,7 @@ Item {
 
   // ------------------------------------------------------------ session
   SessionBlock {
-    x: center.width / 2 - 200; y: 672; width: 400
+    x: center.gx - 200; y: center.sessionY; width: 400
     pal: center.pal
     prom: center.prom
     onWantsKeyboardChanged: center.wantsKeyboard = wantsKeyboard

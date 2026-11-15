@@ -114,6 +114,39 @@ def memory():
             "swap": m.get("SwapTotal", 0) - m.get("SwapFree", 0)}
 
 
+# ----------------------------------------------------------------- gpu
+
+def gpu():
+    """The first GPU that reports its load (amdgpu): load, memory, sensors."""
+    root = "/sys/class/drm"
+    for card in sorted(os.listdir(root)):
+        d = f"{root}/{card}/device"
+        busy = read(f"{d}/gpu_busy_percent").strip()
+        if not busy or "-" in card:
+            continue
+        out = {"busy": int(busy) / 100}
+        for key, name in (("vramUsed", "mem_info_vram_used"), ("vramTotal", "mem_info_vram_total"),
+                          ("gttUsed", "mem_info_gtt_used"), ("gttTotal", "mem_info_gtt_total")):
+            v = read(f"{d}/{name}").strip()
+            if v:
+                out[key] = int(v)
+        try:
+            hw = f"{d}/hwmon/" + os.listdir(f"{d}/hwmon")[0]
+            t = read(f"{hw}/temp1_input").strip()
+            pw = read(f"{hw}/power1_average").strip() or read(f"{hw}/power1_input").strip()
+            fq = read(f"{hw}/freq1_input").strip()
+            if t:
+                out["temp"] = round(int(t) / 1000)
+            if pw:
+                out["watts"] = round(int(pw) / 1e6, 1)
+            if fq:
+                out["mhz"] = round(int(fq) / 1e6)
+        except OSError:
+            pass
+        return out
+    return {}
+
+
 # ----------------------------------------------------------------- net
 
 class Net:
@@ -493,7 +526,7 @@ def main():
     bat_name = None
     while True:
         now = time.time()
-        out = {"t": round(now, 3), "cpu": cpu.sample(), "mem": memory(), "net": net.sample(now), "bat": battery()}
+        out = {"t": round(now, 3), "cpu": cpu.sample(), "gpu": gpu(), "mem": memory(), "net": net.sample(now), "bat": battery()}
         bat_name = out["bat"].get("name") or bat_name
         if tick % 3 == 0:
             p = procs.sample(now)
@@ -507,6 +540,9 @@ def main():
                 out["peers"] = p
         if tick % 30 == 0:
             cfg = config()
+            up = read("/proc/uptime").split()
+            out["host"] = {"name": os.uname().nodename, "kernel": os.uname().release,
+                           "uptime": int(float(up[0])) if up else 0}
             out["tail"] = tail.sample(cfg)
         if tick % 300 == 0 and bat_name:
             out["batDay"] = battery_day(bat_name)

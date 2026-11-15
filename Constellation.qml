@@ -38,7 +38,7 @@ HiCanvas {
     days.forEach(function(d) { maxF = Math.max(maxF, d.focus) })
     var pts = days.map(function(d) {
       var a = hash(d.date, 7) * 2 * Math.PI
-      var r = inner + hash(d.date, 13) * 110
+      var r = inner + hash(d.date, 13) * (Math.min(width, height) / 2 - inner - 4)
       return { x: cx + r * Math.cos(a) * 0.9, y: cy + r * Math.sin(a), s: 0.8 + 2.2 * d.focus / maxF, date: d.date }
     })
     ctx.strokeStyle = pal.css(pal.cyan, 0.13)

@@ -12,7 +12,10 @@ Item {
 
   width: 1232
   height: 176
-  readonly property real pw: (width - 4 * 8) / 5
+  readonly property real weekW: 300
+  readonly property real pw: (width - weekW - 5 * 8) / 5
+  readonly property real weekX: 2 * (pw + 8)
+  function px(i) { return i < 2 ? i * (pw + 8) : weekX + weekW + 8 + (i - 2) * (pw + 8) }
 
   readonly property var p: prom.p
 
@@ -99,7 +102,7 @@ Item {
   HPanel {
     id: quality
     pal: row.pal
-    x: row.pw * 1 + 8 * 1; width: row.pw; height: 176
+    x: row.px(1); width: row.pw; height: 176
     label: "Focus quality"
     tip: "Share of today's tracked computer time spent in a focus session, window switches per hour, number of 2 h+ sessions and median session length. Graph: focus per hour today. Click: Stats tab."
     tipAbove: true
@@ -133,7 +136,7 @@ Item {
   HPanel {
     id: coffee
     pal: row.pal
-    x: row.pw * 2 + 8 * 2; width: row.pw; height: 176
+    x: row.px(2); width: row.pw; height: 176
     label: "Caffeine"
     tip: "Caffeine estimated in your body (mg) and the best time for the next cup. Curve: today, dashed = forecast, cyan line = best time, dotted = the 'another cup is worth it' level. Bottom: average change on days with coffee. Hover the panel to log a cup or undo."
     tipAbove: true
@@ -221,7 +224,7 @@ Item {
   // ------------------------------------------------------------- network
   HPanel {
     pal: row.pal
-    x: row.pw * 3 + 8 * 3; width: row.pw; height: 176
+    x: row.px(3); width: row.pw; height: 176
     label: "Network"
     tip: "Download (orange) and upload (cyan) rate of the active connection over the last 80 s; Wi-Fi network and band; Tailscale relay and peers with ping latency."
     tipAbove: true
@@ -265,7 +268,7 @@ Item {
   HPanel {
     id: batt
     pal: row.pal
-    x: row.pw * 4 + 8 * 4; width: row.pw; height: 176
+    x: row.px(4); width: row.pw; height: 176
     label: "Battery"
     tip: "Current power draw (W) and charge level; time to empty or full. Graph: charge (orange) and draw (pink) over the last 24 h, from UPower."
     tipAbove: true
@@ -300,5 +303,73 @@ Item {
       Spark { anchors.fill: parent; values: parent.series(row.sys.batDay.charge, 100); color: row.pal.acc }
     }
     HText { anchors.bottom: parent.bottom; text: "24 h · charge ━  watts ━"; color: row.pal.mut; font.pixelSize: 8 }
+  }
+
+  // ------------------------------------------------------- week of focus
+  HPanel {
+    id: weekPanel
+    pal: row.pal
+    x: row.weekX; width: row.weekW; height: 176
+    label: "Week · focus"
+    tip: "This week, day by day: focus time (bright) over tracked computer time (faint). Grid: focus by weekday × hour over the last 8 weeks. Click: Stats tab."
+    tipAbove: true
+    tab: "stats"
+    readonly property var days: row.prom.week ? row.prom.week.days || [] : []
+    readonly property real focusTotal: days.reduce(function(a, d) { return a + (d.focusSeconds || 0) }, 0)
+    note: Math.floor(focusTotal / 3600) + " h " + String(Math.floor(focusTotal % 3600 / 60)).padStart(2, "0")
+
+    Row {
+      spacing: 12
+      // Mon–Sun: tracked time faint, focus bright.
+      Column {
+        width: 100
+        spacing: 3
+        Repeater {
+          model: weekPanel.days
+          Row {
+            required property var modelData
+            spacing: 4
+            readonly property real span: 10 * 3600
+            HText {
+              width: 8
+              text: "SMTWTFS".charAt(new Date(modelData.date + "T12:00:00").getDay())
+              color: modelData.date === (row.prom.p ? row.prom.p.todayDate : "") ? row.pal.fg : row.pal.mut
+              font.pixelSize: 8
+            }
+            Item {
+              width: 84; height: 9
+              Rectangle { width: Math.min(84, 84 * (modelData.trackedSeconds || 0) / parent.parent.span); height: 9; color: row.pal.alpha(row.pal.fg, 0.07) }
+              Rectangle { width: Math.min(84, 84 * (modelData.focusSeconds || 0) / parent.parent.span); height: 9; color: row.pal.acc; opacity: 0.85 }
+            }
+          }
+        }
+      }
+      // Weekday × hour over the last weeks.
+      Column {
+        spacing: 3
+        readonly property var minutes: row.prom.extra && row.prom.extra.heatmap ? row.prom.extra.heatmap.minutes : []
+        readonly property real maxM: {
+          var m = 1
+          for (var r = 0; r < minutes.length; r++) for (var c = 0; c < minutes[r].length; c++) m = Math.max(m, minutes[r][c])
+          return m
+        }
+        Repeater {
+          model: parent.minutes
+          Row {
+            required property var modelData
+            spacing: 1.2
+            Repeater {
+              model: modelData
+              Rectangle {
+                required property var modelData
+                width: 6.6; height: 9
+                color: modelData > 0 ? row.pal.acc : row.pal.alpha(row.pal.fg, 0.05)
+                opacity: modelData > 0 ? 0.15 + 0.85 * modelData / parent.parent.parent.maxM : 1
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

@@ -1,9 +1,10 @@
 import QtQuick
 import qs.Commons
 
-// A tooltip for whatever it fills: after a short hover, a box with `text`
-// shows under (or above) the item, as wide as `tipWidth`. The item is raised
-// while hovered so the box is not covered by its neighbours.
+// A tooltip for whatever it fills: a right click on the item shows a box
+// with `text` under (or above) it, as wide as `tipWidth`; leaving the item
+// or a second right click hides it. The item is raised while the box shows
+// so its neighbours do not cover it.
 Item {
   id: tip
 
@@ -13,16 +14,19 @@ Item {
   property real tipWidth: Math.max(220, width)
   property real tipX: 0
   property real tipY: NaN                // set to place the box freely
-  property var raiseTarget: parent       // raised while hovered
-  readonly property bool hovered: hover.hovered
+  property var raiseTarget: parent       // raised while the box shows
+  property bool open: false
+  readonly property bool shown: open && text.length > 0
 
   anchors.fill: parent
 
-  HoverHandler { id: hover }
-  Timer { id: delay; interval: 500; running: hover.hovered && tip.text.length > 0 }
-  readonly property bool shown: hover.hovered && !delay.running && text.length > 0
+  HoverHandler { id: hover; onHoveredChanged: if (!hovered) tip.open = false }
+  TapHandler {
+    acceptedButtons: Qt.RightButton
+    onTapped: tip.open = !tip.open
+  }
 
-  Binding { target: tip.raiseTarget; property: "z"; value: 60; when: tip.hovered }
+  Binding { target: tip.raiseTarget; property: "z"; value: 60; when: tip.shown }
 
   Rectangle {
     visible: opacity > 0

@@ -25,8 +25,13 @@ Item {
   readonly property real mR: margins[1] / k + 16
   readonly property real avail: stageW - mL - mR
   readonly property real gap: 16
-  readonly property real colW: Math.max(300, Math.min(460, (avail - 560 - 2 * gap) / 2))
-  readonly property real centerX: mL + colW + gap + (avail - 2 * colW - 2 * gap - 560) / 2
+  readonly property real colW: Math.max(270, Math.min(300, avail * 0.21))
+  readonly property real centerX: mL + colW + gap
+  readonly property real centerW: avail - 2 * colW - 2 * gap
+  readonly property real bottomY: Math.max(756, stageH - 204)
+  // Where the globe ends up, in stage units.
+  readonly property real globeX: centerX + center.gx
+  readonly property real globeY: 28 + center.gy
 
   HudPalette { id: theme }
   // On a low battery the HUD stays up but stops moving.
@@ -56,7 +61,7 @@ Item {
 
     // A faint glow behind the globe.
     Rectangle {
-      x: hud.centerX + 280 - 420; y: 448 - 420; width: 840; height: 840; radius: 420
+      x: hud.globeX - 420; y: hud.globeY - 420; width: 840; height: 840; radius: 420
       gradient: Gradient {
         GradientStop { position: 0; color: theme.alpha(theme.acc, 0.05) }
         GradientStop { position: 0.6; color: "transparent" }
@@ -65,7 +70,8 @@ Item {
     }
 
     Constellation {
-      x: hud.centerX + 280 - 400; y: 448 - 400; width: 800; height: 800
+      x: hud.globeX - 400 * center.gs; y: hud.globeY - 400 * center.gs; width: 800 * center.gs; height: 800 * center.gs
+      inner: 272 * center.gs
       pal: theme
       pixelScale: hud.pixelScale
       year: prom.year
@@ -75,11 +81,13 @@ Item {
     PromLeft {
       x: hud.mL; y: 28
       width: hud.colW
-      pal: theme; prom: prom
+      pal: theme; prom: prom; sys: sys
     }
     Center {
       id: center
       x: hud.centerX; y: 28
+      width: hud.centerW
+      height: hud.bottomY - 28 - 10
       pal: theme; prom: prom; sys: sys
       active: hud.active
       animate: hud.active && !hud.lowPower
@@ -93,7 +101,7 @@ Item {
       pixelScale: hud.pixelScale
     }
     BottomRow {
-      x: hud.mL; y: Math.max(756, hud.stageH - 204)
+      x: hud.mL; y: hud.bottomY
       width: hud.avail
       pal: theme; sys: sys; prom: prom
       pixelScale: hud.pixelScale
@@ -110,14 +118,14 @@ Item {
     }
     HText {
       visible: hud.lowPower
-      x: hud.centerX + 280 - width / 2; y: hud.stageH - 20
+      x: hud.globeX - width / 2; y: hud.stageH - 20
       text: "LOW BATTERY · ANIMATIONS PAUSED"
       color: theme.red; font.pixelSize: 9; font.letterSpacing: 2
     }
 
     HText {
       visible: !prom.live
-      x: hud.centerX + 280 - width / 2; y: 12
+      x: hud.globeX - width / 2; y: 12
       text: "PROMETHEUS OFFLINE"
       color: theme.red; font.pixelSize: 9; font.letterSpacing: 2
     }

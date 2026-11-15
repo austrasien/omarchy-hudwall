@@ -8,6 +8,7 @@ Item {
 
   required property var pal
   required property var prom
+  required property var sys
   readonly property var p: prom.p
 
   width: 330
@@ -23,11 +24,19 @@ Item {
     return r === "legendary" ? pal.acc2 : r === "epic" ? pal.mag : r === "rare" ? pal.cyan : pal.dim
   }
 
+  // ------------------------------------------------------------- status
+  StatusPanel {
+    pal: col.pal
+    sys: col.sys
+    width: col.width; height: 80
+    tip: "Time and date; outside temperature and conditions (Omarchy weather); volume (scroll to change, click to mute); Wi-Fi network. Icons: the system tray (click to open, middle click for the secondary action, right click for the menu)."
+  }
+
   // ------------------------------------------------------------- league
   HPanel {
     id: leaguePanel
     pal: col.pal
-    width: col.width; height: 232
+    y: 90; width: col.width; height: 200
     label: "League"
     tip: "Weekly league race against 9 historical rivals. Dots: each player's XP this week (you in white, cyan = promotion zone, red = relegation zone). At week end the top ranks move up a league, the bottom ones down. Bars: your XP per day this week, stacked by source. Click: Leagues tab."
     note: col.prom.league ? col.prom.league.daysLeft + " days left" : ""
@@ -45,6 +54,7 @@ Item {
 
     Row {
       spacing: 12
+      z: rivalArea.containsMouse ? 20 : 0
       // The league's gem in its own color.
       Shape {
         width: 54; height: 60
@@ -125,7 +135,7 @@ Item {
 
     // The ten leagues, the current one ringed.
     Row {
-      y: 72
+      y: 64
       spacing: 0
       Repeater {
         model: col.prom.leagues
@@ -153,7 +163,7 @@ Item {
     // The week's race: every player on an XP axis, you in white.
     Item {
       id: race
-      y: 98; width: parent.width; height: 34
+      y: 82; width: parent.width; height: 34
       readonly property real maxXp: {
         var m = 1
         for (var i = 0; i < leaguePanel.players.length; i++) m = Math.max(m, leaguePanel.players[i].xp)
@@ -190,14 +200,14 @@ Item {
 
     // XP of the week, by source, a stacked bar a day.
     Row {
-      y: 146
+      y: 122
       spacing: 12
       Repeater {
         model: col.prom.extra ? col.prom.extra.xpSources : []
         Item {
           id: day
           required property var modelData
-          width: 30; height: 40
+          width: 30; height: 30
           readonly property var parts: [
             { v: modelData.focus || 0, c: col.pal.acc },
             { v: modelData.tasks || 0, c: col.pal.acc2 },
@@ -221,7 +231,7 @@ Item {
               model: day.parts.slice().reverse()
               Rectangle {
                 required property var modelData
-                width: 30; height: modelData.v / day.maxDay * 32
+                width: 30; height: modelData.v / day.maxDay * 24
                 color: modelData.c; opacity: 0.85
               }
             }
@@ -241,7 +251,7 @@ Item {
   HPanel {
     id: seasonPanel
     pal: col.pal
-    y: 244; width: col.width; height: 122
+    y: 300; width: col.width; height: 110
     readonly property var s: col.prom.season
     label: s ? "Season " + s.number + " · " + s.label : "Season"
     note: s ? Math.max(0, Math.ceil((new Date(s.end + "T23:59:59") - Date.now()) / 86400000)) + " days left" : ""
@@ -252,7 +262,8 @@ Item {
       spacing: 14
       // The season medal: ribbon and disc, bars for the goals reached.
       Item {
-        width: 62; height: 74
+        width: 50; height: 60
+        scale: 0.8; transformOrigin: Item.TopLeft
         Shape {
           anchors.fill: parent
           preferredRendererType: Shape.CurveRenderer
@@ -280,7 +291,7 @@ Item {
         }
       }
       Column {
-        width: 230
+        width: seasonPanel.width - 2 * seasonPanel.pad - 54
         spacing: 6
         Row {
           width: parent.width
@@ -313,7 +324,7 @@ Item {
   HPanel {
     id: boardsPanel
     pal: col.pal
-    y: 378; width: col.width; height: 130
+    y: 420; width: col.width; height: 112
     label: "Leaderboards"
     tip: "Your current score against your all-time best on each board (cyan tick = the record). Bottom: today's rank among all your days. Click: Leaderboards tab."
     note: "now / record"
@@ -353,10 +364,6 @@ Item {
           }
         }
       }
-      HText {
-        text: col.prom.boards.days && col.prom.boards.days.you ? "today: rank " + col.prom.boards.days.you.rank + " / " + col.prom.boards.days.count : ""
-        color: col.pal.mut; font.pixelSize: 9
-      }
     }
   }
 
@@ -364,7 +371,7 @@ Item {
   HPanel {
     id: questPanel
     pal: col.pal
-    y: 520; width: col.width; height: 192
+    y: 542; width: col.width; height: 170
     label: "Quests · achievements"
     tip: "Open quests (▶ = the active one; hover a row to activate, set aside or complete it). Next tier: the achievement closest to unlocking. Capsules: your latest unlocked achievements, coloured by rarity. Click: Quests tab."
     tipAbove: true

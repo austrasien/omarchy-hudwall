@@ -10,6 +10,8 @@ Item {
   property bool active: false
 
   property var cpu: ({})
+  property var gpu: ({})
+  property var host: ({})
   property var mem: ({})
   property var net: ({})
   property var bat: ({})
@@ -21,6 +23,7 @@ Item {
 
   // Short histories for the sparklines (one sample a second).
   property var cpuHist: []
+  property var gpuHist: []
   property var downHist: []
   property var upHist: []
   property var npuHist: []
@@ -40,6 +43,11 @@ Item {
       cpu = d.cpu
       if (d.cpu.total !== undefined) cpuHist = push(cpuHist, d.cpu.total, 60)
     }
+    if (d.gpu) {
+      gpu = d.gpu
+      if (d.gpu.busy !== undefined) gpuHist = push(gpuHist, d.gpu.busy, 60)
+    }
+    if (d.host) host = d.host
     if (d.mem) mem = d.mem
     if (d.net) {
       net = d.net
