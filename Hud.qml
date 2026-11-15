@@ -16,11 +16,12 @@ Item {
   readonly property real pixelScale: k * devicePixelRatio
 
   // The stage fills the screen, at least 1440 x 960 units, with the same
-  // margin all around (`edge` units). cfg.margins = [left, right] adds room
-  // on a side, in screen pixels, if something covers it.
+  // margin all around (`edge` units), counted on the sides from the inner
+  // edge of the day tape and day bar rails (about 12 px each):
+  // cfg.margins = [left, right] in screen pixels.
   readonly property real stageW: width / k
   readonly property real stageH: height / k
-  readonly property var margins: Array.isArray(cfg.margins) && cfg.margins.length === 2 ? cfg.margins : [0, 0]
+  readonly property var margins: Array.isArray(cfg.margins) && cfg.margins.length === 2 ? cfg.margins : [12, 12]
   readonly property real edge: 28
   readonly property real mL: margins[0] / k + edge
   readonly property real mR: margins[1] / k + edge
