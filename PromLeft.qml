@@ -13,6 +13,7 @@ Item {
   width: 330
   height: 712
 
+
   function fmtH(sec) {
     var s = Math.max(0, Math.round(sec || 0))
     var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60)
@@ -26,8 +27,9 @@ Item {
   HPanel {
     id: leaguePanel
     pal: col.pal
-    width: 330; height: 232
+    width: col.width; height: 232
     label: "League"
+    tip: "Weekly league race against 9 historical rivals. Dots: each player's XP this week (you in white, cyan = promotion zone, red = relegation zone). At week end the top ranks move up a league, the bottom ones down. Bars: your XP per day this week, stacked by source. Click: Leagues tab."
     note: col.prom.league ? col.prom.league.daysLeft + " days left" : ""
     tab: "leagues"
 
@@ -239,11 +241,12 @@ Item {
   HPanel {
     id: seasonPanel
     pal: col.pal
-    y: 244; width: 330; height: 122
+    y: 244; width: col.width; height: 122
     readonly property var s: col.prom.season
     label: s ? "Season " + s.number + " · " + s.label : "Season"
     note: s ? Math.max(0, Math.ceil((new Date(s.end + "T23:59:59") - Date.now()) / 86400000)) + " days left" : ""
     tab: "seasons"
+    tip: "The current season (a calendar quarter). Bar: season XP against its two goals, set from last season's XP; each goal reached adds a bar to the season medal. The A–F grade is given when the season ends. Click: Seasons tab."
 
     Row {
       spacing: 14
@@ -310,8 +313,9 @@ Item {
   HPanel {
     id: boardsPanel
     pal: col.pal
-    y: 378; width: 330; height: 130
+    y: 378; width: col.width; height: 130
     label: "Leaderboards"
+    tip: "Your current score against your all-time best on each board (cyan tick = the record). Bottom: today's rank among all your days. Click: Leaderboards tab."
     note: "now / record"
     tab: "leaderboard"
 
@@ -360,8 +364,10 @@ Item {
   HPanel {
     id: questPanel
     pal: col.pal
-    y: 520; width: 330; height: 192
+    y: 520; width: col.width; height: 192
     label: "Quests · achievements"
+    tip: "Open quests (▶ = the active one; hover a row to activate, set aside or complete it). Next tier: the achievement closest to unlocking. Capsules: your latest unlocked achievements, coloured by rarity. Click: Quests tab."
+    tipAbove: true
     note: col.prom.questList ? (col.prom.questList.quests || []).length + " open" : ""
     tab: "quests"
 

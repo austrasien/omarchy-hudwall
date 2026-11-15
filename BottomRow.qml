@@ -12,6 +12,7 @@ Item {
 
   width: 1232
   height: 176
+  readonly property real pw: (width - 4 * 8) / 5
 
   readonly property var p: prom.p
 
@@ -46,8 +47,10 @@ Item {
   HPanel {
     id: ghost
     pal: row.pal
-    width: 240; height: 176
+    width: row.pw; height: 176
     label: "Ghost race"
+    tip: "Focus time accumulated since the start of the day: today (orange) against your best day (cyan) and yesterday at the same time (grey). Click: Stats tab."
+    tipAbove: true
     note: "vs record"
     tab: "stats"
 
@@ -96,8 +99,10 @@ Item {
   HPanel {
     id: quality
     pal: row.pal
-    x: 248; width: 240; height: 176
+    x: row.pw * 1 + 8 * 1; width: row.pw; height: 176
     label: "Focus quality"
+    tip: "Share of today's tracked computer time spent in a focus session, window switches per hour, number of 2 h+ sessions and median session length. Graph: focus per hour today. Click: Stats tab."
+    tipAbove: true
     note: "today"
     tab: "stats"
 
@@ -128,8 +133,10 @@ Item {
   HPanel {
     id: coffee
     pal: row.pal
-    x: 496; width: 240; height: 176
+    x: row.pw * 2 + 8 * 2; width: row.pw; height: 176
     label: "Caffeine"
+    tip: "Caffeine estimated in your body (mg) and the best time for the next cup. Curve: today, dashed = forecast, cyan line = best time, dotted = the 'another cup is worth it' level. Bottom: average change on days with coffee. Hover the panel to log a cup or undo."
+    tipAbove: true
     tab: "stats"
     readonly property var cd: row.prom.coffeeDay
     readonly property var now: row.p && row.p.coffee ? row.p.coffee : (cd ? cd.coffee : null)
@@ -214,8 +221,10 @@ Item {
   // ------------------------------------------------------------- network
   HPanel {
     pal: row.pal
-    x: 744; width: 240; height: 176
+    x: row.pw * 3 + 8 * 3; width: row.pw; height: 176
     label: "Network"
+    tip: "Download (orange) and upload (cyan) rate of the active connection over the last 80 s; Wi-Fi network and band; Tailscale relay and peers with ping latency."
+    tipAbove: true
     note: (row.sys.net.ssid || row.sys.net.iface || "") + (row.sys.net.mhz ? " · " + (row.sys.net.mhz > 5900 ? "6" : row.sys.net.mhz > 4000 ? "5" : "2,4") + " GHz" : "")
 
     Row {
@@ -256,8 +265,10 @@ Item {
   HPanel {
     id: batt
     pal: row.pal
-    x: 992; width: 240; height: 176
+    x: row.pw * 4 + 8 * 4; width: row.pw; height: 176
     label: "Battery"
+    tip: "Current power draw (W) and charge level; time to empty or full. Graph: charge (orange) and draw (pink) over the last 24 h, from UPower."
+    tipAbove: true
     readonly property var b: row.sys.bat
     note: b.left ? (b.status === "Charging" ? "full in " : "") + row.hm(b.left) + (b.status === "Charging" ? "" : " left") : (b.status === "Full" ? "full" : b.ac ? "on AC" : "")
 
@@ -265,18 +276,7 @@ Item {
       width: parent.width
       spacing: 6
       HText { text: batt.b.watts !== undefined ? batt.b.watts.toFixed(1) : "–"; color: row.pal.fg; font.pixelSize: 22; font.weight: Font.DemiBold }
-      HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 4; text: "W · " + (batt.b.pct !== undefined ? batt.b.pct + " %" : ""); color: row.pal.mut; font.pixelSize: 9 }
-      Item { width: parent.width - 150; height: 1 }
-      Item {
-        width: 56; height: 20; anchors.verticalCenter: parent.verticalCenter
-        Rectangle { width: 50; height: 14; y: 3; color: "transparent"; border.color: row.pal.acc }
-        Rectangle { x: 50; y: 7; width: 4; height: 6; color: row.pal.acc }
-        Rectangle {
-          x: 2; y: 5; height: 10; width: 46 * (batt.b.pct || 0) / 100
-          color: (batt.b.pct || 0) < 15 ? row.pal.red : row.pal.acc
-        }
-        HText { visible: batt.b.status === "Charging"; anchors.centerIn: parent; text: "⚡"; color: "white"; font.pixelSize: 9 }
-      }
+      HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 4; text: "W · " + (batt.b.pct !== undefined ? batt.b.pct + " %" : "") + (batt.b.status === "Charging" ? " · charging" : ""); color: row.pal.mut; font.pixelSize: 9 }
     }
     // The day: charge (bright), draw in watts (faint).
     Item {

@@ -199,4 +199,11 @@ Item {
       }
     }
   }
+
+  HoverTip {
+    pal: block.pal
+    raiseTarget: block.parent
+    tipWidth: 400
+    text: "Focus session: name and time (pauses excluded). Hover for pause, resume or end, or to start one. Challenges: extension bets of the session (● won, ◐ running, ◌ offered, ○ left). TASKS: your open tasks, shown only while hovered; tick them during a session or add one."
+  }
 }

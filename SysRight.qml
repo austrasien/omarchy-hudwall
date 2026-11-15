@@ -12,6 +12,7 @@ Item {
   width: 330
   height: 712
 
+
   property real pixelScale: 1
   readonly property bool inSession: !!(prom.p && prom.p.running)
   readonly property var memParts: sys.mem.total ? [
@@ -24,8 +25,9 @@ Item {
   // ---------------------------------------------------------------- cpu
   HPanel {
     pal: col.pal
-    width: 330; height: 168
-    label: "CPU · " + (col.sys.cpu.threads ? col.sys.cpu.threads.length : "–") + " threads"
+    width: col.width; height: 168
+    label: "CPU · "
+    tip: "CPU load of the whole machine (graph: last minute) and per thread. Cells are orange while a Prometheus session runs, blue otherwise. Header: average clock and CPU temperature." + (col.sys.cpu.threads ? col.sys.cpu.threads.length : "–") + " threads"
     note: (col.sys.cpu.ghz ? col.sys.cpu.ghz.toFixed(1) + " GHz" : "") + (col.sys.cpu.temp ? " · " + col.sys.cpu.temp + " °C" : "")
 
     Row {
@@ -68,8 +70,9 @@ Item {
   // ------------------------------------------------------------- memory
   HPanel {
     pal: col.pal
-    y: 180; width: 330; height: 124
+    y: 180; width: col.width; height: 124
     label: "Memory"
+    tip: "RAM split: used by programs, page cache (freed when needed), compressed swap in zram, free."
     note: col.sys.mem.total ? Math.round(col.sys.mem.total / 1073741824) + " GB" : ""
 
     Row {
@@ -124,8 +127,9 @@ Item {
   // ---------------------------------------------------------------- npu
   HPanel {
     pal: col.pal
-    y: 316; width: 330; height: 116
+    y: 316; width: col.width; height: 116
     label: "NPU · Lemonade"
+    tip: "The local LLM on the NPU (Lemonade). Tokens per second of the last generation (graph while generating), request queue, and requests served since start."
     note: col.sys.npu.up ? (col.sys.npu.busy ? "busy" : "ready") : "stopped"
 
     HText {
@@ -157,8 +161,9 @@ Item {
   // --------------------------------------------------------------- apps
   HPanel {
     pal: col.pal
-    y: 444; width: 330; height: 118
+    y: 444; width: col.width; height: 118
     label: "Applications"
+    tip: "Busiest program groups: share of the whole machine's CPU (all cores) and resident memory. ×N = number of instances."
     note: "CPU · RAM"
     Column {
       width: parent.width
@@ -190,8 +195,10 @@ Item {
   HPanel {
     id: weekPanel
     pal: col.pal
-    y: 574; width: 330; height: 138
+    y: 574; width: col.width; height: 138
     label: "Week · focus"
+    tip: "This week, day by day: focus time (bright) over tracked computer time (faint). Grid: focus by weekday × hour over the last 8 weeks. Click: Stats tab."
+    tipAbove: true
     tab: "stats"
     readonly property var days: col.prom.week ? col.prom.week.days || [] : []
     readonly property real focusTotal: days.reduce(function(a, d) { return a + (d.focusSeconds || 0) }, 0)

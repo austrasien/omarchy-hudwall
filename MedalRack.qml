@@ -1,17 +1,21 @@
 import QtQuick
+import Quickshell
 
 // The medal rack, as on a uniform: one ribbon per medal won, four to a row,
 // the short row on top and centred; season medals lead. A ribbon carries 1
 // to 3 dots (day, week, month), edge stripes for the harder ones, and the
 // number of times it was won.
-Column {
+Item {
   id: rack
 
   required property var pal
   property var medals: []
   property var seasonMedals: []
   readonly property int perRow: 4
-  spacing: 3
+  implicitWidth: col.implicitWidth
+  implicitHeight: col.implicitHeight
+  width: implicitWidth
+  height: implicitHeight
 
   // The daemon pushes a fresh array every two seconds: rebuild the ribbons
   // only when their content changes.
@@ -33,6 +37,9 @@ Column {
   }
   readonly property int attributions: all.reduce(function(a, m) { return a + (m.count || 1) }, 0)
 
+  Column {
+  id: col
+  spacing: 3
   Repeater {
     model: rack.rows
     Row {
@@ -111,10 +118,35 @@ Column {
       }
     }
   }
-  HText {
+  Row {
     anchors.horizontalCenter: parent.horizontalCenter
     topPadding: 3
-    text: rack.all.length ? rack.all.length + " DECORATIONS · " + rack.attributions + " AWARDS" : "NO DECORATIONS"
-    color: rack.pal.mut; font.pixelSize: 8; font.letterSpacing: 1.5
+    spacing: 8
+    HText {
+      text: rack.all.length ? rack.all.length + " DECORATIONS · " + rack.attributions + " AWARDS" : "NO DECORATIONS"
+      color: rack.pal.mut; font.pixelSize: 8; font.letterSpacing: 1.5
+    }
+    // Share: Prometheus builds its card (the rack among it) and offers to save it.
+    HText {
+      text: String.fromCodePoint(0xF0497) + " SHARE"
+      color: shareArea.containsMouse ? rack.pal.acc : rack.pal.dim
+      font.pixelSize: 8; font.letterSpacing: 1.5
+      MouseArea {
+        id: shareArea
+        anchors.fill: parent; anchors.margins: -4
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "shareCard"])
+      }
+    }
+  }
+  }
+
+  HoverTip {
+    pal: rack.pal
+    raiseTarget: rack.parent
+    tipWidth: 340
+    tipX: (rack.width - 340) / 2
+    text: "Medals won, as a ribbon rack: 1, 2 or 3 dots = daily, weekly or monthly medal; edge stripes = harder ones; number = times won; season medals first. Hover a ribbon for its name. SHARE: Prometheus builds an image card with the rack and asks where to save it."
   }
 }

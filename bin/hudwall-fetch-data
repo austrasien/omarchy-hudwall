@@ -2,8 +2,9 @@
 # Downloads the two public datasets the HUD uses, into ~/.local/share/hudwall:
 #   - land.png: the globe's land mask, built from Natural Earth's 1:110m
 #     land (via the world-atlas npm package, public domain);
-#   - dbip-city-lite.mmdb: DB-IP's free IP-to-city database (CC BY 4.0),
-#     to place network peers on the globe. Lookups stay local.
+#   - dbip-city-ipv4.mmdb: DB-IP's free IP-to-city database (CC BY 4.0, via
+#     the ip-location-db npm package), to place network peers on the globe.
+#     Lookups stay local.
 # Run it once, then again now and then to refresh the IP database.
 set -euo pipefail
 
@@ -17,24 +18,18 @@ echo "land: world-atlas land-110m"
 curl -fsSL --max-time 60 -o "$tmp/land-110m.json" https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json
 python3 "$here/hudwall-land" "$tmp/land-110m.json" "$dest/land.png"
 
-month="$(date +%Y-%m)"
-prev="$(date -d "$(date +%Y-%m-01) -1 month" +%Y-%m)"
-for m in "$month" "$prev"; do
-  url="https://download.db-ip.com/free/dbip-city-lite-$m.mmdb.gz"
-  echo "geoip: $url"
-  if curl -fsSL --max-time 600 -o "$tmp/dbip.mmdb.gz" "$url"; then
-    gunzip -c "$tmp/dbip.mmdb.gz" > "$tmp/dbip.mmdb"
-    mv "$tmp/dbip.mmdb" "$dest/dbip-city-lite.mmdb"
-    echo "ok: $dest/dbip-city-lite.mmdb"
-    # A lookup, so this run also tests the reader.
-    python3 -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import mmdb
+# DB-IP's city database (CC BY 4.0) as packaged by ip-location-db, IPv4.
+geo_url="https://unpkg.com/@ip-location-db/dbip-city-mmdb/dbip-city-ipv4.mmdb"
+echo "geoip: $geo_url"
+if curl -fsSL --max-time 900 -o "$tmp/dbip.mmdb" "$geo_url"; then
+  mv "$tmp/dbip.mmdb" "$dest/dbip-city-ipv4.mmdb"
+  echo "ok: $dest/dbip-city-ipv4.mmdb"
+  # A lookup, so this run also tests the reader.
+  python3 -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import mmdb
 r = mmdb.Reader(sys.argv[2])
-for ip in ("8.8.8.8", "1.1.1.1", "160.79.104.10"):
-    d = r.get(ip) or {}
-    l = d.get("location") or {}
-    print("test:", ip, (d.get("city") or {}).get("names", {}).get("en"), (d.get("country") or {}).get("iso_code"), l.get("latitude"), l.get("longitude"))' "$here" "$dest/dbip-city-lite.mmdb"
-    exit 0
-  fi
-done
-echo "geoip: download failed (the globe still works, peers stay unplaced)" >&2
-exit 1
+for ip in ("8.8.8.8", "1.1.1.1"):
+    print("test:", ip, r.get(ip))' "$here" "$dest/dbip-city-ipv4.mmdb"
+else
+  echo "geoip: download failed (the globe still works, peers stay unplaced)" >&2
+  exit 1
+fi

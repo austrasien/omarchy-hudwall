@@ -318,7 +318,7 @@ def npu():
 # ------------------------------------------------------- network peers
 
 class Geo:
-    PATHS = ["dbip-city-lite.mmdb", "GeoLite2-City.mmdb"]
+    PATHS = ["dbip-city-ipv4.mmdb", "dbip-city-lite.mmdb", "GeoLite2-City.mmdb"]
 
     def __init__(self):
         self.reader = None
@@ -341,11 +341,19 @@ class Geo:
         loc = None
         try:
             r = self.reader.get(ip) or {}
-            l = r.get("location") or {}
-            if "latitude" in l and "longitude" in l:
+            if "latitude" in r:
+                # ip-location-db layout: flat fields.
+                city, country, lat, lon = r.get("city"), r.get("country_code"), r["latitude"], r["longitude"]
+            else:
+                # MaxMind / DB-IP layout: nested records.
+                l = r.get("location") or {}
+                lat, lon = l.get("latitude"), l.get("longitude")
                 city = ((r.get("city") or {}).get("names") or {}).get("en")
                 country = (r.get("country") or {}).get("iso_code")
-                loc = {"lat": l["latitude"], "lon": l["longitude"], "city": city, "country": country}
+            if lat is not None and lon is not None:
+                if isinstance(city, str):
+                    city = city.split(" (")[0]
+                loc = {"lat": lat, "lon": lon, "city": city, "country": country}
         except Exception:
             pass
         if len(self.cache) > 2000:

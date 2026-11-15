@@ -259,6 +259,48 @@ Item {
     onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", "stats"])
   }
 
+
+  // ------------------------------------------------------------ tooltips
+  // Invisible hover zones over the pieces that are not panels.
+  Item {
+    x: 30; y: 14; width: 500; height: 22
+    HoverTip {
+      pal: center.pal; raiseTarget: center
+      tipWidth: 360; tipX: 70
+      text: "Your Prometheus level and the XP still needed for the next one. XP comes from focus (1 per 10 min), tasks, quests, challenges, medals, achievements and agent tokens. ⚙ opens Prometheus settings."
+    }
+  }
+  Item {
+    x: center.width / 2 - 250; y: 392 - 250; width: 500; height: 500
+    HoverTip {
+      pal: center.pal; raiseTarget: center
+      tipWidth: 300; tipX: 100; tipY: 330
+      text: "Globe: the Earth lit by the real sun, turning once a minute. Arcs: the last 10 public servers this computer opened a connection to (orange = still connected), labelled app · city; white ring = home. Inner ring: today's 24 hours, coloured by the app in use. Outer ring: this year, one tick per day, brighter with more focus."
+    }
+  }
+  Item {
+    x: 0; y: 594; width: 140; height: 100
+    HoverTip {
+      pal: center.pal; raiseTarget: center; above: true; tipWidth: 260
+      text: "Time spent in each app today, as tracked by Prometheus. The colours match the 24-hour ring."
+    }
+  }
+  Item {
+    x: center.width - 170; y: 594; width: 170; height: 52
+    HoverTip {
+      pal: center.pal; raiseTarget: center; above: true; tipWidth: 260; tipX: -90
+      text: "Today against yesterday at the same hour (focus, or tracked time if no focus yet), your most used app today, and your busiest day. Click: Stats tab."
+    }
+  }
+  Item {
+    visible: center.prom.goal !== null
+    x: center.width - 150; y: 128; width: 150; height: 40
+    HoverTip {
+      pal: center.pal; raiseTarget: center; tipWidth: 240; tipX: -90
+      text: "Your focus-hours goal for the day, week or month (set in Prometheus settings) and the time done so far."
+    }
+  }
+
   // ------------------------------------------------------------ question card
   Item {
     id: ask

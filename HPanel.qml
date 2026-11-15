@@ -12,6 +12,8 @@ Item {
   property string label: ""
   property string note: ""
   property string tab: ""
+  property string tip: ""          // what the panel shows, on hover
+  property bool tipAbove: false
   property real pad: 12
   readonly property bool hovered: hover.hovered
   default property alias content: body.data
@@ -77,5 +79,12 @@ Item {
     color: panel.pal.acc
     font.pixelSize: 8
     font.letterSpacing: 1.5
+  }
+
+  HoverTip {
+    pal: panel.pal
+    text: panel.tip
+    above: panel.tipAbove
+    tipWidth: panel.width
   }
 }
