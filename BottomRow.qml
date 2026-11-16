@@ -502,7 +502,7 @@ Item {
     pal: row.pal
     x: row.weekX; width: row.weekW; height: 176
     label: "Week · focus"
-    tip: "Left, this week day by day: time at the desk (the capsule) and in focus sessions (the bright bar inside), with their figures; days to come are dotted. Right, on the same weekday rows: time in focus sessions by hour of the day over the last 8 weeks (deeper = more, scale top right; the busiest hour outlined; the line = now). Today's row is lit across both. Header: the week in session and its share of the desk time. Click a legend entry to hide it; click the panel: Stats tab."
+    tip: "This week on one grid, weekday by hour of the day. Pale blocks: the usual, your sessions at that weekday and hour over the last 8 weeks (deeper = more); hours to come show only that. Bright blocks rising with the minutes: this week's time in session; the line underneath: time at the desk. Right: each day's totals (at desk, in session). Today's row is lit, the vertical line is now. Header: the week in session and its share of the desk time. Click a legend entry to hide it; click the panel: Stats tab."
     tipAbove: true
     tab: "stats"
     readonly property var days: row.prom.week ? row.prom.week.days || [] : []
@@ -513,13 +513,7 @@ Item {
       + (deskTotal > 0 ? " · " + Math.round(focusTotal / deskTotal * 100) + " % of desk" : "")
     readonly property int nowDay: new Date().getDay()
     readonly property int nowHour: new Date().getHours()
-    // The busiest weekday x hour of the last weeks.
-    readonly property var peak: {
-      var best = { r: -1, c: -1, v: 0 }
-      for (var r = 0; r < heat.length; r++) for (var c = 0; c < heat[r].length; c++)
-        if (heat[r][c] > best.v) best = { r: r, c: c, v: heat[r][c] }
-      return best
-    }
+
 
     readonly property var heat: row.prom.extra && row.prom.extra.heatmap ? row.prom.extra.heatmap.minutes : []
     readonly property real heatMax: {
@@ -533,44 +527,41 @@ Item {
       var h = Math.floor((s || 0) / 3600), m = Math.floor((s || 0) % 3600 / 60)
       return h > 0 ? h + "h" + String(m).padStart(2, "0") : m + "m"
     }
-    // Left: this week; right: the last weeks, each with its own heading.
+    // One grid, weekday x hour of the day. Pale: the usual (the last 8
+    // weeks' sessions at that weekday and hour); over it, this week as it
+    // went: the time in session (a block rising with the minutes) and at the
+    // desk (a line underneath). Hours to come only show the usual: what the
+    // day tends to hold. Right: the day's totals.
     Legend {
       id: weekLegend
       pal: weekPanel.pal
-      width: grid.leftW
-      spacing: 6
+      width: parent.width
+      spacing: 10
       size: 9
       items: [
+        { key: "focus", name: "in session", color: row.pal.series(0) },
         { key: "tracked", name: "at desk", color: row.pal.series(3) },
-        { key: "focus", name: "in session", color: row.pal.series(0) }
+        { key: "usual", name: "usual (8 weeks)", color: row.pal.alpha(row.pal.series(0), 0.35) }
       ]
     }
-    HText {
-      x: grid.gridX
-      text: "8 WEEKS"
-      color: row.pal.mut; font.pixelSize: 9; font.letterSpacing: 1
-    }
-    // Seven rows shared by the days (left) and the weekday x hour grid of
-    // the last weeks (right), so both read along the same line.
     Item {
       id: grid
-      y: 16
-      width: parent.width; height: parent.height - 16 - 10
+      y: 18
+      width: parent.width; height: parent.height - 18 - 11
       readonly property real rowH: height / 7
-      readonly property real leftW: 138
-      readonly property real gridX: leftW + 10
-      readonly property real cellW: (width - gridX) / 24
+      readonly property real figW: 62
+      readonly property real cellsX: 14
+      readonly property real cellW: (width - cellsX - figW - 4) / 24
+      readonly property real nowX: cellsX + (weekPanel.nowHour + new Date().getMinutes() / 60) * cellW
 
-      // Today's row, lit across both halves: this week's day and its weekday
-      // in the last weeks read on one line.
+      // Today's row, lit.
       Rectangle {
         y: weekPanel.nowDay * grid.rowH; width: parent.width; height: grid.rowH
         radius: 2
         gradient: Gradient {
           orientation: Gradient.Horizontal
           GradientStop { position: 0; color: row.pal.alpha(row.pal.acc, 0.14) }
-          GradientStop { position: 0.6; color: row.pal.alpha(row.pal.acc, 0.05) }
-          GradientStop { position: 1; color: row.pal.alpha(row.pal.acc, 0.10) }
+          GradientStop { position: 1; color: row.pal.alpha(row.pal.acc, 0.05) }
         }
       }
 
@@ -580,57 +571,73 @@ Item {
           id: dayRow
           required property var modelData
           required property int index
+          readonly property int wd: new Date(modelData.date + "T12:00:00").getDay()
           readonly property bool today: modelData.date === (row.prom.p ? row.prom.p.todayDate : "")
-          y: index * grid.rowH; width: grid.leftW; height: grid.rowH
+          readonly property var hours: today ? row.prom.todayHours : row.prom.weekHours[modelData.date] || null
+          readonly property var usual: weekPanel.heat[wd] || []
+          y: wd * grid.rowH; width: grid.width; height: grid.rowH
+
           HText {
             x: 2; width: 10; anchors.verticalCenter: parent.verticalCenter
-            text: "SMTWTFS".charAt(new Date(dayRow.modelData.date + "T12:00:00").getDay())
+            text: "SMTWTFS".charAt(dayRow.wd)
             color: dayRow.today ? row.pal.acc : row.pal.mut
             font.pixelSize: 9; font.weight: dayRow.today ? Font.Bold : Font.Normal
           }
-          // A capsule: the time at the desk, and inside it the time in
-          // session, bright; days to come are only a dotted outline.
-          Item {
-            id: capsule
-            x: 14; width: parent.width - 14 - 58; height: Math.max(4, grid.rowH - 7)
-            anchors.verticalCenter: parent.verticalCenter
-            readonly property real r: height / 2
-            Rectangle {
-              anchors.fill: parent; radius: capsule.r
-              color: dayRow.modelData.future ? "transparent" : row.pal.alpha(row.pal.fg, 0.04)
-              border.width: dayRow.modelData.future ? 1 : 0
-              border.color: row.pal.alpha(row.pal.fg, 0.10)
-            }
-            Rectangle {
-              visible: weekLegend.on("tracked") && (dayRow.modelData.trackedSeconds || 0) > 0
-              width: Math.max(height, parent.width * Math.min(1, (dayRow.modelData.trackedSeconds || 0) / weekPanel.span)); height: parent.height
-              radius: capsule.r
-              color: row.pal.alpha(row.pal.series(3), dayRow.today ? 0.45 : 0.30)
-            }
-            Rectangle {
-              visible: weekLegend.on("focus") && (dayRow.modelData.focusSeconds || 0) >= 60
-              x: 1.5; anchors.verticalCenter: parent.verticalCenter
-              width: Math.max(height, parent.width * Math.min(1, (dayRow.modelData.focusSeconds || 0) / weekPanel.span) - 3); height: parent.height - 3
-              radius: height / 2
-              gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0; color: row.pal.alpha(row.pal.series(0), 0.55) }
-                GradientStop { position: 1; color: row.pal.series(0) }
+          Repeater {
+            model: 24
+            Item {
+              id: cell
+              required property int index
+              readonly property real u: dayRow.usual[index] || 0
+              readonly property real f: dayRow.hours ? dayRow.hours.f[index] : 0
+              readonly property real d: dayRow.hours ? dayRow.hours.d[index] : 0
+              readonly property bool past: !dayRow.modelData.future && (!dayRow.today || index <= weekPanel.nowHour)
+              x: grid.cellsX + index * grid.cellW; width: grid.cellW; height: grid.rowH
+              // The usual, pale (a dot when nothing usually happens).
+              Rectangle {
+                visible: cell.u > 0 && weekLegend.on("usual")
+                anchors.fill: parent; anchors.margins: 1
+                radius: 1.5
+                color: row.pal.series(0)
+                opacity: 0.06 + 0.30 * cell.u / weekPanel.heatMax
+              }
+              Rectangle {
+                visible: cell.u === 0 || !weekLegend.on("usual")
+                anchors.centerIn: parent
+                width: 2; height: 2; radius: 1
+                color: row.pal.alpha(row.pal.fg, 0.12)
+              }
+              // This week: in session, rising with the minutes.
+              Rectangle {
+                visible: cell.past && cell.f >= 1 && weekLegend.on("focus")
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 2
+                x: 1; width: parent.width - 2
+                height: Math.max(2, (parent.height - 4) * Math.min(1, cell.f / 60))
+                radius: 1.5
+                color: row.pal.series(0)
+              }
+              // At the desk: a line underneath, brighter with the minutes.
+              Rectangle {
+                visible: cell.past && cell.d >= 1 && weekLegend.on("tracked")
+                anchors.bottom: parent.bottom
+                x: 0.5; width: parent.width - 1; height: 1.5
+                color: row.pal.series(3)
+                opacity: 0.3 + 0.7 * Math.min(1, cell.d / 60)
               }
             }
           }
-          // The two figures, in their legend's colours: at the desk, in session.
+          // The day's totals: at the desk, in session.
           Row {
             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
             visible: !dayRow.modelData.future
             HText {
-              width: 30; horizontalAlignment: Text.AlignRight
+              width: 32; horizontalAlignment: Text.AlignRight
               visible: weekLegend.on("tracked")
               text: weekPanel.hm2(dayRow.modelData.trackedSeconds)
               color: row.pal.alpha(row.pal.series(3), 0.8); font.pixelSize: 9
             }
             HText {
-              width: 28; horizontalAlignment: Text.AlignRight
+              width: 30; horizontalAlignment: Text.AlignRight
               visible: weekLegend.on("focus")
               text: (dayRow.modelData.focusSeconds || 0) >= 60 ? weekPanel.hm2(dayRow.modelData.focusSeconds) : "–"
               color: (dayRow.modelData.focusSeconds || 0) >= 60 ? row.pal.series(0) : row.pal.mut
@@ -639,69 +646,18 @@ Item {
           }
         }
       }
-      // Focus by weekday x hour, last weeks.
-      Repeater {
-        model: weekPanel.heat.length * 24
-        Item {
-          required property int index
-          readonly property int r: Math.floor(index / 24)
-          readonly property int c: index % 24
-          readonly property real v: weekPanel.heat[r] ? weekPanel.heat[r][c] || 0 : 0
-          readonly property bool lit: v > 0 && weekLegend.on("focus")
-          x: grid.gridX + c * grid.cellW; y: r * grid.rowH
-          width: grid.cellW; height: grid.rowH
-          // An empty hour: a dot; a busy one: a rounded block, deeper with
-          // the time; the busiest outlined.
-          Rectangle {
-            visible: !parent.lit
-            anchors.centerIn: parent
-            width: 2; height: 2; radius: 1
-            color: row.pal.alpha(row.pal.fg, 0.14)
-          }
-          Rectangle {
-            visible: parent.lit
-            anchors.fill: parent; anchors.margins: 1
-            radius: 1.5
-            color: row.pal.series(0)
-            opacity: 0.25 + 0.75 * parent.v / weekPanel.heatMax
-          }
-          Rectangle {
-            visible: parent.lit && parent.r === weekPanel.peak.r && parent.c === weekPanel.peak.c
-            anchors.fill: parent; anchors.margins: -0.5
-            radius: 2; color: "transparent"
-            border.color: row.pal.fg; border.width: 1
-          }
-        }
-      }
       // Now: a thin line down the current hour.
       Rectangle {
-        x: grid.gridX + (weekPanel.nowHour + new Date().getMinutes() / 60) * grid.cellW
-        y: -2; width: 1; height: parent.height + 4
+        x: grid.nowX; y: -2; width: 1; height: parent.height + 4
         color: row.pal.acc; opacity: 0.7
       }
-    }
-    // The grid's scale, bottom right.
-    Row {
-      anchors.right: parent.right; y: 1
-      spacing: 2
-      Repeater {
-        model: 5
-        Rectangle {
-          required property int index
-          anchors.verticalCenter: parent.verticalCenter
-          width: 6; height: 6
-          color: index === 0 ? row.pal.alpha(row.pal.fg, 0.06) : row.pal.series(0)
-          opacity: index === 0 ? 1 : 0.2 + 0.2 * index
-        }
-      }
-      HText { text: Math.round(weekPanel.heatMax / 60) + " h"; color: row.pal.mut; font.pixelSize: 9 }
     }
     // Hours under the grid.
     Repeater {
       model: [0, 6, 12, 18]
       HText {
         required property var modelData
-        x: grid.gridX + modelData * grid.cellW
+        x: grid.cellsX + modelData * grid.cellW
         anchors.bottom: parent.bottom; anchors.bottomMargin: -2
         text: modelData + "h"; color: row.pal.mut; font.pixelSize: 9
       }

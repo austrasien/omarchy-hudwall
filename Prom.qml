@@ -24,6 +24,43 @@ Item {
   property var insights: null      // stats:insights
   property var summary: null       // stats:summary (today)
   property var timeline: null      // stats:timeline (today)
+  // This week hour by hour: date -> { f: [24] minutes in session, d: [24]
+  // minutes at the desk }, by clock hour. Past days are read once (they no
+  // longer change), today from the timeline.
+  property var weekHours: ({})
+  function hoursOf(t) {
+    var f = [], d = []
+    for (var h = 0; h < 24; h++) { f.push(0); d.push(0) }
+    function add(arr, a, b) {
+      while (a < b) {
+        var t0 = new Date(a)
+        var next = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate(), t0.getHours() + 1).getTime()
+        var e = Math.min(b, next)
+        arr[t0.getHours()] += (e - a) / 60000
+        a = e
+      }
+    }
+    var segs = t.segments || [], ses = t.sessions || []
+    for (var i = 0; i < segs.length; i++) add(d, segs[i].start, segs[i].end)
+    for (var k = 0; k < ses.length; k++) add(f, ses[k].start, ses[k].end || Date.now())
+    return { f: f, d: d }
+  }
+  function loadWeekHours() {
+    var days = week ? week.days || [] : []
+    var today = new Date(dayStart(0)).toDateString()
+    // Forget the days of past weeks.
+    var keep = {}, gone = false
+    days.forEach(function(day) { if (prom.weekHours[day.date]) keep[day.date] = prom.weekHours[day.date] })
+    for (var k in prom.weekHours) if (!keep[k]) gone = true
+    if (gone) prom.weekHours = keep
+    days.forEach(function(day) {
+      if (day.future || new Date(day.fromMs).toDateString() === today || prom.weekHours[day.date]) return
+      call("stats:timeline", [{ fromMs: day.fromMs, toMs: day.fromMs + 86400000 }], function(t) {
+        var m = Object.assign({}, prom.weekHours); m[day.date] = prom.hoursOf(t); prom.weekHours = m
+      })
+    })
+  }
+  readonly property var todayHours: timeline ? hoursOf(timeline) : null
   property var week: null          // stats:days 0
   property var lastWeek: null      // stats:days -1
   property var year: []            // [{ date, focusSeconds }], 53 weeks
@@ -77,7 +114,7 @@ Item {
     call("stats:insights", [], function(d) { prom.insights = d })
     call("stats:summary", [{ fromMs: dayStart(0), toMs: Date.now() }], function(d) { prom.summary = d })
     call("stats:timeline", [], function(d) { prom.timeline = d })
-    call("stats:days", [0], function(d) { prom.week = d })
+    call("stats:days", [0], function(d) { prom.week = d; prom.loadWeekHours() })
     call("coffee:day", [dayStart(0)], function(d) { prom.coffeeDay = d })
     call("quests:list", [], function(d) { prom.questList = d })
     call("tasks:list", [], function(d) { prom.tasks = d })
