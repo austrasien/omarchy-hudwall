@@ -62,6 +62,8 @@ Item {
   // ------------------------------------------------------------ header
   Column {
     id: header
+    // Above the rings and globe, so the medals' legends show over them.
+    z: 5
     x: 0; width: center.width; y: 0
     spacing: 6
     HText {

@@ -23,7 +23,7 @@ Item {
   readonly property var all: {
     var parsed = JSON.parse(sig)
     var s = (parsed[1] || []).map(function(m) {
-      return { name: m.name || ("Season " + m.number), color: m.color, dot: m.dot, edges: m.edge || "none", dots: m.bars || 1, count: 1, star: true }
+      return { name: m.name || ("Season " + m.number), desc: m.desc || "", period: "season", color: m.color, dot: m.dot, edges: m.edge || "none", dots: m.bars || 1, count: 1, star: true }
     })
     return s.concat(parsed[0] || [])
   }
@@ -35,6 +35,16 @@ Item {
     while (l.length) out.push(l.splice(0, perRow))
     return out
   }
+  // The same legend as Prometheus' own placard.
+  function legendFor(m) {
+    if (m.period === "season") return m.name + " · " + (m.desc || "") + " · kept for good"
+    return m.name + ((m.count || 1) > 1 ? " ×" + m.count : "") + (m.desc ? " · " + m.desc : "")
+      + (m.current ? " · won " + (m.period === "day" ? "today" : m.period === "week" ? "this week" : "this month") : "")
+  }
+  // The ribbon under the pointer, and where it sits in the rack.
+  property var hoveredMedal: null
+  property point hoveredAt: Qt.point(0, 0)
+
   readonly property int attributions: all.reduce(function(a, m) { return a + (m.count || 1) }, 0)
 
   Column {
@@ -100,19 +110,12 @@ Item {
             color: "white"; font.pixelSize: 8; font.weight: Font.Bold
             style: Text.Outline; styleColor: "black"
           }
-          HoverHandler { id: ribHover }
-          Rectangle {
-            visible: ribHover.hovered
-            z: 20
-            y: 20; x: (parent.width - width) / 2
-            width: tip.implicitWidth + 12; height: tip.implicitHeight + 8
-            color: rack.pal.alpha(rack.pal.bg, 0.95)
-            border.color: rack.pal.alpha(rack.pal.acc, 0.4)
-            HText {
-              id: tip
-              anchors.centerIn: parent
-              text: rib.modelData.name + ((rib.modelData.count || 1) > 1 ? " ×" + rib.modelData.count : "") + (rib.modelData.desc ? " — " + rib.modelData.desc : "")
-              color: rack.pal.fg; font.pixelSize: 9
+          HoverHandler {
+            onHoveredChanged: {
+              if (hovered) {
+                rack.hoveredMedal = rib.modelData
+                rack.hoveredAt = rib.mapToItem(rack, rib.width / 2, rib.height)
+              } else if (rack.hoveredMedal === rib.modelData) rack.hoveredMedal = null
             }
           }
         }
@@ -141,6 +144,27 @@ Item {
       }
     }
   }
+  }
+
+  // The legend of the hovered ribbon, above everything around the rack.
+  Rectangle {
+    visible: rack.hoveredMedal !== null
+    z: 100
+    width: Math.min(340, legend.implicitWidth + 16)
+    height: legend.implicitHeight + 10
+    x: Math.max(0, Math.min(rack.width - width, rack.hoveredAt.x - width / 2))
+    y: rack.hoveredAt.y + 4
+    color: rack.pal.alpha(rack.pal.bg, 0.96)
+    border.color: rack.pal.alpha(rack.pal.acc, 0.45)
+    radius: 3
+    HText {
+      id: legend
+      x: 8; y: 5
+      width: Math.min(implicitWidth, 324)
+      wrapMode: Text.WordWrap
+      text: rack.hoveredMedal ? rack.legendFor(rack.hoveredMedal) : ""
+      color: rack.pal.fg; font.pixelSize: 9
+    }
   }
 
   HoverTip {
