@@ -47,7 +47,7 @@ Item {
     Gauge {
       id: cpuGauge
       pal: col.pal
-      width: 80; height: 80
+      width: Math.min(80, parent.height); height: width
       anchors.verticalCenter: parent.verticalCenter
       value: col.sys.cpu.total || 0
       color: cpuPanel.c
@@ -104,7 +104,7 @@ Item {
     Gauge {
       id: gpuGauge
       pal: col.pal
-      width: 80; height: 80
+      width: Math.min(80, parent.height); height: width
       anchors.verticalCenter: parent.verticalCenter
       value: gpuPanel.g.busy || 0
       color: col.pal.series(0)
@@ -125,8 +125,9 @@ Item {
           { key: "watts", name: "power", color: col.pal.series(2), value: gpuPanel.g.watts !== undefined ? gpuPanel.g.watts + " W" : "" }
         ]
       }
+      // Between the legend and the memory bars, whatever room they leave.
       Item {
-        y: 20; width: parent.width; height: 28
+        y: gpuLegend.height + 3; width: parent.width; height: Math.max(12, gpuMem.y - y - 4)
         readonly property real wMax: Math.max(10, Math.max.apply(null, col.sys.gpuWattHist.concat([1])) * 1.1)
         Spark {
           visible: gpuLegend.on("load")
@@ -142,6 +143,7 @@ Item {
         }
       }
       Column {
+        id: gpuMem
         anchors.bottom: parent.bottom
         width: parent.width
         spacing: 3

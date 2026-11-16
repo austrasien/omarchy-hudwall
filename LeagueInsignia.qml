@@ -38,6 +38,8 @@ Canvas {
   }
 
   onPaint: {
+    // The shape helper may not be ready on the first paint at load.
+    if (typeof shape.vertices !== "function") { Qt.callLater(requestPaint); return }
     var ctx = getContext("2d")
     ctx.reset()
     var cx = width / 2, cy = height / 2
