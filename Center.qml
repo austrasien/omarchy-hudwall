@@ -102,20 +102,57 @@ Item {
         width: parent.width
         spacing: 4
         readonly property var pr: center.p ? center.p.profile : null
+        // Today's XP, all sources, for the highlight on hover.
+        readonly property real todayXp: {
+          var days = center.prom.extra ? center.prom.extra.xpSources || [] : []
+          var today = center.p ? center.p.todayDate : ""
+          for (var i = 0; i < days.length; i++) if (days[i].date === today) {
+            var d = days[i]
+            return (d.focus || 0) + (d.tasks || 0) + (d.challenges || 0) + (d.quests || 0) + (d.medals || 0) + (d.achievements || 0) + (d.agents || 0)
+          }
+          return 0
+        }
+        readonly property bool showToday: xpHover.hovered && todayXp > 0
         HText {
           text: (center.p && center.p.handle ? "@" + center.p.handle + " · " : "") + "LVL " + (xpBlock.pr ? xpBlock.pr.level : "–")
           color: center.pal.acc
         }
         HBar {
+          id: xpBar
           pal: center.pal
           width: parent.width
           value: xpBlock.pr && xpBlock.pr.levelCost ? xpBlock.pr.levelXp / xpBlock.pr.levelCost : 0
+          HoverHandler { id: xpHover; margin: 6 }
+          // On hover: the part earned today, lit (all of it when today's XP
+          // took you past a level).
+          Rectangle {
+            readonly property real cost: xpBlock.pr ? Math.max(1, xpBlock.pr.levelCost) : 1
+            readonly property real have: xpBlock.pr ? xpBlock.pr.levelXp : 0
+            x: parent.width * Math.max(0, xpBlock.pr ? have - xpBlock.todayXp : 0) / cost
+            width: parent.width * Math.min(have, xpBlock.todayXp) / cost
+            y: -2; height: parent.height + 4
+            radius: 1
+            color: center.pal.fg
+            opacity: xpBlock.showToday ? 0.9 : 0
+            Behavior on opacity { NumberAnimation { duration: 160 } }
+            Rectangle {
+              anchors.fill: parent; anchors.margins: -3
+              radius: 3; color: "transparent"
+              border.color: center.pal.alpha(center.pal.fg, 0.35); border.width: 1
+            }
+          }
         }
         Row {
           spacing: 8
           HText {
             text: xpBlock.pr ? xpBlock.pr.levelXp + " / " + xpBlock.pr.levelCost + " XP" : ""
             color: center.pal.dim; font.pixelSize: 9
+          }
+          HText {
+            visible: xpBlock.showToday
+            text: "+" + Math.round(xpBlock.todayXp) + " XP today"
+              + (xpBlock.pr && xpBlock.todayXp > xpBlock.pr.levelXp ? " · level up!" : "")
+            color: center.pal.fg; font.pixelSize: 9; font.weight: Font.DemiBold
           }
           HText {
             text: "⚙"
