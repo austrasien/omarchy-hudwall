@@ -62,27 +62,13 @@ Item {
     Row {
       spacing: 12
       z: rivalArea.containsMouse ? 20 : 0
-      Shape {
-        width: 40; height: 44
-        preferredRendererType: Shape.CurveRenderer
-        ShapePath {
-          strokeWidth: -1
-          fillGradient: LinearGradient {
-            x1: 0; y1: 0; x2: 40; y2: 44
-            GradientStop { position: 0; color: Qt.lighter(leaguePanel.lg ? leaguePanel.lg.color : col.pal.cyan, 1.6) }
-            GradientStop { position: 0.5; color: leaguePanel.lg ? leaguePanel.lg.color : col.pal.cyan }
-            GradientStop { position: 1; color: Qt.darker(leaguePanel.lg ? leaguePanel.lg.color : col.pal.cyan, 2) }
-          }
-          startX: 20; startY: 1
-          PathLine { x: 38; y: 12 } PathLine { x: 38; y: 32 } PathLine { x: 20; y: 43 }
-          PathLine { x: 2; y: 32 } PathLine { x: 2; y: 12 } PathLine { x: 20; y: 1 }
-        }
-        ShapePath {
-          strokeWidth: -1
-          fillColor: Qt.rgba(1, 1, 1, 0.25)
-          startX: 20; startY: 1
-          PathLine { x: 38; y: 12 } PathLine { x: 20; y: 22 } PathLine { x: 2; y: 12 } PathLine { x: 20; y: 1 }
-        }
+      // The league's own insignia (its shape in Prometheus), in its material.
+      LeagueInsignia {
+        width: 44; height: 44
+        anchors.verticalCenter: parent.verticalCenter
+        league: leaguePanel.lg && leaguePanel.lg.league !== undefined ? leaguePanel.lg.league : 0
+        color: leaguePanel.lg ? leaguePanel.lg.color : col.pal.cyan
+        animate: col.prom.active
       }
       Column {
         spacing: 2
