@@ -65,7 +65,7 @@ Item {
     pal: row.pal
     width: row.pw; height: 176
     label: "Ghost race"
-    tip: "Two races since the start of the day: time in focus sessions, and agent tokens. Today against the record (best focus day; for tokens, the recent day with the most) and yesterday at the same time. Click a legend entry to hide a curve; peaks labelled. Click the panel: Stats tab."
+    tip: "Two races since the start of the day: time in focus sessions, and agent tokens. Your bar runs towards the checkered line, the record day's total; the ghost is the record day at this same hour, the diamond yesterday at this hour (their figures under the track). Beside your figure: how far ahead (▲) or behind (▼) the ghost. Pace: where today ends if the rest brings what the record's day did from this hour; ★ record! once past the line. Click: Stats tab."
     tipAbove: true
     note: "vs record"
     tab: "stats"
@@ -81,63 +81,28 @@ Item {
     readonly property var tYest: row.tokenRun(row.prom.hoursYesterday, true)
     readonly property real tTop: Math.max(1, Math.max.apply(null, tToday.concat(tBest, tYest, [0]))) * 1.15
 
-    Legend {
-      id: ghostLegend
-      pal: row.pal
+    function at(a, i) { return a.length ? a[Math.max(0, Math.min(a.length - 1, i))] : 0 }
+    GhostLane {
       width: parent.width
-      items: [
-        { key: "today", name: "today", color: row.pal.series(0) },
-        { key: "best", name: "record", color: row.pal.series(1) },
-        { key: "yest", name: "yesterday", color: row.pal.series(2) }
-      ]
+      pal: row.pal
+      label: "FOCUS"
+      nowV: ghost.at(ghost.today, ghost.today.length - 1)
+      ghostV: ghost.at(ghost.best, ghost.today.length - 1)
+      yestV: ghost.at(ghost.yest, ghost.today.length - 1)
+      finishV: ghost.at(ghost.best, ghost.best.length - 1)
+      format: function(v) { return row.hm(v * 3600) }
+      animate: row.prom.active
     }
-    // Focus.
-    HText { y: 16; text: "FOCUS · " + row.hm((ghost.today.length ? ghost.today[ghost.today.length - 1] : 0) * 3600); color: row.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.2 }
-    Item {
-      y: 28; width: parent.width; height: 40
-      Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: row.pal.alpha(row.pal.fg, 0.08) }
-      Spark {
-        visible: ghostLegend.on("best")
-        anchors.fill: parent; fill: false
-        id: gBest; values: ghost.best; max: ghost.topV; color: row.pal.series(1); lineWidth: 1; peaks: 1
-        format: function(v) { return row.hm(v * 3600) }
-      }
-      Spark {
-        visible: ghostLegend.on("yest")
-        width: parent.width * (ghost.yest.length - 1) / 72; height: parent.height; fill: false
-        id: gYest; avoid: gBest.visible ? gBest.callouts : []; values: ghost.yest; max: ghost.topV; color: row.pal.series(2); lineWidth: 1; peaks: 1
-        format: function(v) { return row.hm(v * 3600) }
-      }
-      Spark {
-        visible: ghostLegend.on("today")
-        width: parent.width * Math.max(1, ghost.today.length - 1) / 72; height: parent.height
-        avoid: (gBest.visible ? gBest.callouts : []).concat(gYest.visible ? gYest.callouts : []); values: ghost.today; max: ghost.topV; color: row.pal.series(0); lineWidth: 1.6; peaks: 3
-        format: function(v) { return row.hm(v * 3600) }
-      }
-    }
-    // Agents.
-    HText { y: 76; text: "AGENTS · " + row.tokens(ghost.tToday.length ? ghost.tToday[ghost.tToday.length - 1] : 0) + " tokens"; color: row.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.2 }
-    Item {
-      y: 88; width: parent.width; height: parent.height - 88
-      Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: row.pal.alpha(row.pal.fg, 0.08) }
-      Spark {
-        visible: ghostLegend.on("best")
-        anchors.fill: parent; fill: false
-        id: tokBest; values: ghost.tBest; max: ghost.tTop; color: row.pal.series(1); lineWidth: 1; peaks: 1
-        format: function(v) { return row.tokens(v) }
-      }
-      Spark {
-        visible: ghostLegend.on("yest")
-        width: parent.width * Math.max(1, ghost.tYest.length - 1) / 24; height: parent.height; fill: false
-        id: tokYest; avoid: tokBest.visible ? tokBest.callouts : []; values: ghost.tYest; max: ghost.tTop; color: row.pal.series(2); lineWidth: 1; peaks: 1
-        format: function(v) { return row.tokens(v) }
-      }
-      Spark {
-        visible: ghostLegend.on("today")
-        width: parent.width * Math.max(1, ghost.tToday.length - 1) / 24; height: parent.height
-        avoid: (tokBest.visible ? tokBest.callouts : []).concat(tokYest.visible ? tokYest.callouts : []); values: ghost.tToday; max: ghost.tTop; color: row.pal.series(0); lineWidth: 1.6; peaks: 3
-        format: function(v) { return row.tokens(v) }
-      }
+    GhostLane {
+      y: 70; width: parent.width
+      pal: row.pal
+      label: "AGENTS"
+      nowV: ghost.at(ghost.tToday, ghost.tToday.length - 1)
+      ghostV: ghost.at(ghost.tBest, ghost.tToday.length - 1)
+      yestV: ghost.at(ghost.tYest, ghost.tYest.length - 1)
+      finishV: ghost.at(ghost.tBest, ghost.tBest.length - 1)
+      format: function(v) { return row.tokens(v) }
+      animate: row.prom.active
     }
   }
 
