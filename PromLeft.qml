@@ -350,10 +350,22 @@ Item {
         Row {
           width: parent.width
           HText { width: parent.width - gradeText.width; text: seasonPanel.s ? (seasonPanel.s.grade ? "GRADE" : "RUNNING · " + col.fmtH((seasonPanel.s.hours || 0) * 3600)) : ""; color: col.pal.mut; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
-          HText {
+          // The grade the season is heading for (the final one once over);
+          // none until the first goal is reached.
+          Column {
             id: gradeText
-            text: seasonPanel.s ? (seasonPanel.s.grade || (seasonPanel.s.bars >= 2 ? "A" : seasonPanel.s.bars >= 1 ? "B" : "—")) : "—"
-            color: col.pal.acc2; font.pixelSize: 30; font.weight: Font.Bold
+            readonly property string g: seasonPanel.s ? (seasonPanel.s.grade || (seasonPanel.s.bars >= 2 ? "A" : seasonPanel.s.bars >= 1 ? "B" : "")) : ""
+            HText {
+              anchors.right: parent.right
+              text: seasonPanel.s && seasonPanel.s.grade ? "GRADE" : "GRADE SO FAR"
+              color: col.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2
+            }
+            HText {
+              anchors.right: parent.right
+              text: gradeText.g || "none yet"
+              color: gradeText.g ? col.pal.series(1) : col.pal.dim
+              font.pixelSize: gradeText.g ? 24 : 9; font.weight: gradeText.g ? Font.Bold : Font.Normal
+            }
           }
         }
         HBar {
