@@ -83,6 +83,7 @@ Item {
     return true
   }
   property bool previewOpen: false
+  property var hudItem: null
   // Super+H held: the HUD comes over the windows until the key is let go,
   // coming up like an old VHS tape whose grid drops out tile by tile
   // (shaders/fog.frag), and closing back faster.
@@ -150,6 +151,7 @@ Item {
 
     Hud {
       id: hud
+      Component.onCompleted: root.hudItem = hud
       anchors.fill: parent
       active: root.active
       cfg: root.cfg
@@ -202,8 +204,75 @@ Item {
     }
   }
 
+  // ------------------------------------------------------------ theme snapshots
+  //
+  // The HUD as each theme's background (`00-hudwall.png` in
+  // ~/.config/omarchy/backgrounds/<theme>/), so that what shows while the
+  // HUD loads (after a shell restart) is the HUD itself, not a photo. The
+  // HUD renders in each theme's colours in turn and grabs itself
+  // (bin/hudwall-theme-snapshots drives it); the current theme's snapshot is
+  // also refreshed after the HUD has been on screen a while.
+  readonly property string backgrounds: Quickshell.env("HOME") + "/.config/omarchy/backgrounds/"
+  property var snapQueue: []
+  property int snapDone: 0
+  property string snapState: "idle"
+  function snapshotNext() {
+    if (!snapQueue.length) {
+      hudItem.paletteFile = ""
+      snapState = "done " + snapDone
+      return
+    }
+    var job = snapQueue[0]
+    snapQueue = snapQueue.slice(1)
+    hudItem.paletteFile = job.colors || ""
+    snapState = "rendering " + job.name
+    snapWait.job = job
+    snapWait.restart()
+  }
+  function grabTo(out, after) {
+    // At the item's size: the grab comes out at the monitor's own pixels
+    // (Qt's devicePixelRatio overshoots at a fractional scale).
+    var w = hudItem.width, h = hudItem.height
+    var ok = hudItem.grabToImage(function(r) {
+      if (r.saveToFile(out)) root.snapDone++
+      after()
+    }, Qt.size(w, h))
+    if (!ok) after()
+  }
+  Timer {
+    id: snapWait
+    property var job: null
+    interval: 1500
+    onTriggered: root.grabTo(job.out, root.snapshotNext)
+  }
+  // The current theme's, refreshed once the HUD has been seen a minute (at
+  // most every six hours, with the data of the day).
+  FileView { id: themeName; path: Quickshell.env("HOME") + "/.local/state/omarchy/current/theme.name"; watchChanges: true; onFileChanged: reload() }
+  property real lastSelfSnap: 0
+  Timer {
+    interval: 60000
+    running: root.active && !root.overWindows && root.snapState.indexOf("rendering") !== 0
+    onTriggered: {
+      var name = themeName.text().trim()
+      if (!name || Date.now() - root.lastSelfSnap < 6 * 3600000) return
+      root.lastSelfSnap = Date.now()
+      Quickshell.execDetached(["mkdir", "-p", root.backgrounds + name])
+      root.grabTo(root.backgrounds + name + "/00-hudwall.png", function() {})
+    }
+  }
+
   IpcHandler {
     target: "austraz.hudwall"
+    // `snapshotThemes <base64 of [{"name":..,"colors":"/path/colors.toml","out":"/path.png"}]>`
+    // (base64: qs ipc splits a plain JSON argument),
+    // then `snapshotStatus` until "done N".
+    function snapshotThemes(json: string): string {
+      try { root.snapQueue = JSON.parse(Qt.atob(json)) } catch (e) { return "bad json" }
+      root.snapDone = 0
+      root.snapshotNext()
+      return "started " + root.snapQueue.length
+    }
+    function snapshotStatus(): string { return root.snapState }
     function preview(): string { root.previewOpen = !root.previewOpen; return root.previewOpen ? "open" : "closed" }
     // For development: a Prometheus or system field as the HUD holds it,
     // e.g. `dump prom.summary` or `dump sys.npu`.

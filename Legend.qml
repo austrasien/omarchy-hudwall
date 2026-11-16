@@ -66,7 +66,7 @@ Item {
       required property int index
       readonly property bool shown: legend.on(modelData.key)
       readonly property var place: legend.places[index]
-      x: place ? place.x : 0; y: place ? place.y : 0
+      x: place && place.x !== undefined ? place.x : 0; y: place && place.y !== undefined ? place.y : 0
       width: line.width; height: line.height
       onWidthChanged: relayout.restart()
       opacity: shown ? 1 : 0.4

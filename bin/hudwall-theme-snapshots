@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""The HUD as every Omarchy theme's background: `00-hudwall.png` in
+~/.config/omarchy/backgrounds/<theme>/, rendered in that theme's colours, so
+the screen shows the HUD (not a photo) while the HUD loads.
+
+  hudwall-theme-snapshots            all themes (built in and your own)
+  hudwall-theme-snapshots NAME...    only these
+  --select                           also make it each theme's background
+
+The HUD comes over the windows meanwhile (12 s, then 1.5 s a theme)."""
+import base64, json, os, subprocess, sys, time
+
+HOME = os.path.expanduser("~")
+DIRS = ["/usr/share/omarchy/themes", f"{HOME}/.config/omarchy/themes"]
+BACKGROUNDS = f"{HOME}/.config/omarchy/backgrounds"
+STATE = f"{HOME}/.local/state/omarchy/theme-backgrounds"
+NAME = "00-hudwall.png"
+
+
+def ipc(*args):
+    r = subprocess.run(["qs", "-p", "/usr/share/omarchy/shell", "ipc", "call", "austraz.hudwall", *args],
+                       capture_output=True, text=True, timeout=20)
+    return r.stdout.strip()
+
+
+def themes():
+    found = {}
+    for d in DIRS:   # your own themes win over the built-in ones of the same name
+        if os.path.isdir(d):
+            for n in sorted(os.listdir(d)):
+                c = os.path.join(d, n, "colors.toml")
+                if os.path.isfile(c):
+                    found[n] = c
+    return found
+
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    select = "--select" in sys.argv
+    all_ = themes()
+    names = args or sorted(all_)
+    jobs = []
+    for n in names:
+        if n not in all_:
+            print(f"no theme {n}", file=sys.stderr)
+            continue
+        os.makedirs(f"{BACKGROUNDS}/{n}", exist_ok=True)
+        jobs.append({"name": n, "colors": all_[n], "out": f"{BACKGROUNDS}/{n}/{NAME}"})
+    if not jobs:
+        return 1
+    ipc("peek", "on")
+    try:
+        # Long enough for the system readings and their curves to come in.
+        time.sleep(12)
+        print(ipc("snapshotThemes", base64.b64encode(json.dumps(jobs).encode()).decode()))  # qs splits plain JSON
+        deadline = time.time() + 4 * len(jobs) + 20
+        state = ""
+        while time.time() < deadline:
+            state = ipc("snapshotStatus")
+            if state.startswith("done"):
+                break
+            time.sleep(0.5)
+        print(state)
+    finally:
+        ipc("peek", "off")
+    if select:
+        os.makedirs(STATE, exist_ok=True)
+        for j in jobs:
+            if os.path.isfile(j["out"]):
+                with open(f"{STATE}/{j['name']}", "w") as f:
+                    f.write(j["out"] + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

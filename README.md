@@ -86,6 +86,21 @@ HUD comes up like an old VHS tape whose grid drops out tile by tile
 Clicks on Prometheus panels open the matching tab of the bar panel through
 `omarchy-shell austraz.prometheus openTab <tab>`.
 
+### The HUD as every theme's background
+
+So that a shell restart shows the HUD while it loads, not a photo:
+
+```bash
+bin/hudwall-theme-snapshots --select   # all themes; or name some: ... tokyo-night nord
+```
+
+The HUD comes over the windows, renders in each theme's colours in turn and
+saves itself as `~/.config/omarchy/backgrounds/<theme>/00-hudwall.png`;
+`--select` makes it each theme's remembered background (then
+`omarchy-theme-bg-set` it for the current theme). After the HUD has been on
+screen a minute, the current theme's snapshot is refreshed (at most every six
+hours).
+
 ## Cost
 
 Measured on a Framework 13 (Ryzen AI 300, 2304 × 1536 logical), whole

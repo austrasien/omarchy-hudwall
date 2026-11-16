@@ -65,7 +65,10 @@ QtObject {
     return "rgba(" + Math.round(c.r * 255) + "," + Math.round(c.g * 255) + "," + Math.round(c.b * 255) + "," + (a === undefined ? c.a : a) + ")"
   }
 
-  readonly property string path: Quickshell.env("HOME") + "/.local/state/omarchy/current/theme/colors.toml"
+  // Another theme's colors.toml to render with (the theme snapshots); the
+  // current theme's otherwise.
+  property string colorsFile: ""
+  readonly property string path: colorsFile || Quickshell.env("HOME") + "/.local/state/omarchy/current/theme/colors.toml"
 
   property FileView file: FileView {
     path: pal.path
