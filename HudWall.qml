@@ -83,10 +83,34 @@ Item {
     return true
   }
   property bool previewOpen: false
+  // Super+H held: the HUD comes over the windows until the key is let go,
+  // lifting like a fog of war (shaders/fog.frag), and closing back faster.
+  property bool peeking: false
+  property bool overWindows: false
+  property real reveal: 1
+  property real fogTime: 0
+  onPeekingChanged: {
+    if (peeking) {
+      settle.stop(); active = true
+      hideFog.stop()
+      overWindows = true
+      showFog.restart()
+    } else if (overWindows) {
+      showFog.stop()
+      hideFog.restart()
+    }
+  }
+  NumberAnimation { id: showFog; target: root; property: "reveal"; from: 0; to: 1; duration: 900; easing.type: Easing.OutCubic }
+  SequentialAnimation {
+    id: hideFog
+    NumberAnimation { target: root; property: "reveal"; to: 0; duration: 320; easing.type: Easing.InCubic }
+    ScriptAction { script: { root.overWindows = false; root.reveal = 1 } }
+  }
+  NumberAnimation on fogTime { running: root.reveal < 1; from: 0; to: 100; duration: 100000; loops: Animation.Infinite }
   // Brief window flashes (a launcher, a notification popup on the desk)
   // should not stop and restart everything: going inactive waits a little.
   property bool active: false
-  readonly property bool wantActive: cfg.visible && (deskEmpty || previewOpen)
+  readonly property bool wantActive: cfg.visible && (deskEmpty || previewOpen || peeking)
   onWantActiveChanged: {
     if (wantActive) { settle.stop(); active = true }
     else settle.restart()
@@ -116,7 +140,7 @@ Item {
     anchors { top: true; bottom: true; left: true; right: true }
 
     WlrLayershell.namespace: "austraz-hudwall"
-    WlrLayershell.layer: WlrLayer.Bottom
+    WlrLayershell.layer: root.overWindows ? WlrLayer.Overlay : WlrLayer.Bottom
     // On an empty desk, a click on the HUD can take the keyboard (its fields:
     // tasks, a coffee's time); a field asking for it keeps it while typed in.
     WlrLayershell.keyboardFocus: root.active || hud.wantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
@@ -129,6 +153,16 @@ Item {
       active: root.active
       cfg: root.cfg
       devicePixelRatio: root.targetScreen ? root.targetScreen.devicePixelRatio : 1
+      // Only while the fog moves: the effect costs nothing otherwise.
+      layer.enabled: root.reveal < 1
+      layer.effect: ShaderEffect {
+        fragmentShader: Qt.resolvedUrl("shaders/fog.frag.qsb")
+        property real reveal: root.reveal
+        property real time: root.fogTime
+        property real aspect: hud.width / Math.max(1, hud.height)
+        property real lines: hud.height / 3
+        property color edgeColor: hud.accent
+      }
     }
   }
 
@@ -178,6 +212,8 @@ Item {
       for (var i = 1; i < parts.length && o !== undefined && o !== null; i++) o = o[parts[i]]
       try { return JSON.stringify(o) } catch (e) { return String(o) }
     }
+    // `peek on` / `peek off`: bound to Super+H pressed and released.
+    function peek(state: string): string { root.peeking = state === "on"; return root.peeking ? "on" : "off" }
     function hitTest(x: string, y: string): string { return hud.hitTest(Number(x), Number(y)) }
     function heraldTest(kind: string): string { return herald.test(kind) }
     function status(): string {

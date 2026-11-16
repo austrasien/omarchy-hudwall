@@ -41,6 +41,7 @@ Item {
   readonly property real globeY: edge + center.gy
 
   HudPalette { id: theme }
+  readonly property color accent: theme.acc
   // On a low battery the HUD stays up but stops moving.
   readonly property bool lowPower: sys.bat.status === "Discharging" && sys.bat.pct !== undefined && sys.bat.pct <= 15
   Sys { id: sys; active: hud.active }

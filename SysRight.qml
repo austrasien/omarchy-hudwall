@@ -161,13 +161,13 @@ Item {
         Spark {
           visible: gpuLegend.on("load")
           anchors.fill: parent
-          values: col.sys.gpuHist; color: col.pal.series(0)
+          values: col.sys.gpuHist; color: col.pal.series(0); peaks: 3
           format: function(v) { return col.pct(v) }
         }
         Spark {
           visible: gpuLegend.on("watts")
           anchors.fill: parent; fill: false; lineWidth: 1
-          values: col.sys.gpuWattHist; max: parent.wMax; color: col.pal.series(2)
+          values: col.sys.gpuWattHist; max: parent.wMax; color: col.pal.series(2); peaks: 2
           format: function(v) { return v.toFixed(1) + " W" }
         }
       }
@@ -272,19 +272,19 @@ Item {
           Spark {
             visible: memLegend.on("cache")
             anchors.fill: parent; fill: false; lineWidth: 1
-            values: col.sys.memCacheHist; max: parent.total; color: col.pal.series(1)
+            values: col.sys.memCacheHist; max: parent.total; color: col.pal.series(1); peaks: 1
             format: function(v) { return parent.gb(v) }
           }
           Spark {
             visible: memLegend.on("zram")
             anchors.fill: parent; fill: false; lineWidth: 1
-            values: col.sys.memZramHist; max: parent.total; color: col.pal.series(2)
+            values: col.sys.memZramHist; max: parent.total; color: col.pal.series(2); peaks: 1
             format: function(v) { return parent.gb(v) }
           }
           Spark {
             visible: memLegend.on("used")
             anchors.fill: parent
-            values: col.sys.memUsedHist; max: parent.total; color: col.pal.series(0)
+            values: col.sys.memUsedHist; max: parent.total; color: col.pal.series(0); peaks: 3
             format: function(v) { return parent.gb(v) }
           }
         }

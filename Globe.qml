@@ -84,13 +84,20 @@ Item {
   readonly property real rad: Math.PI / 180
   readonly property string maskPath: (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/hudwall/land.png"
 
+  // Smooth while the globe turns; once settled on its routes, one frame a
+  // second is enough (the packets then step along their arcs).
+  readonly property bool moving: sweeping || Math.abs(turn(lon0, span.centre)) > 0.2
+  property real lastTick: 0
   Timer {
-    interval: Math.round(1000 / globe.fps)
+    interval: globe.moving ? Math.round(1000 / globe.fps) : 1000
     repeat: true
     running: globe.active && globe.visible
     onTriggered: {
-      globe.steer(1 / globe.fps)
-      globe.phase = (globe.phase + 1 / (globe.fps * 3)) % 1
+      var now = Date.now()
+      var dt = globe.lastTick ? Math.min(1.5, (now - globe.lastTick) / 1000) : 1 / globe.fps
+      globe.lastTick = now
+      globe.steer(dt)
+      globe.phase = (globe.phase + dt / 3) % 1
       globe.frame = globe.computeFrame()
     }
   }

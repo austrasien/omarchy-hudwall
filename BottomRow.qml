@@ -99,19 +99,19 @@ Item {
       Spark {
         visible: ghostLegend.on("best")
         anchors.fill: parent; fill: false
-        values: ghost.best; max: ghost.topV; color: row.pal.series(1); lineWidth: 1
+        values: ghost.best; max: ghost.topV; color: row.pal.series(1); lineWidth: 1; peaks: 1
         format: function(v) { return row.hm(v * 3600) }
       }
       Spark {
         visible: ghostLegend.on("yest")
         width: parent.width * (ghost.yest.length - 1) / 72; height: parent.height; fill: false
-        values: ghost.yest; max: ghost.topV; color: row.pal.series(2); lineWidth: 1
+        values: ghost.yest; max: ghost.topV; color: row.pal.series(2); lineWidth: 1; peaks: 1
         format: function(v) { return row.hm(v * 3600) }
       }
       Spark {
         visible: ghostLegend.on("today")
         width: parent.width * Math.max(1, ghost.today.length - 1) / 72; height: parent.height
-        values: ghost.today; max: ghost.topV; color: row.pal.series(0); lineWidth: 1.6
+        values: ghost.today; max: ghost.topV; color: row.pal.series(0); lineWidth: 1.6; peaks: 3
         format: function(v) { return row.hm(v * 3600) }
       }
     }
@@ -123,19 +123,19 @@ Item {
       Spark {
         visible: ghostLegend.on("best")
         anchors.fill: parent; fill: false
-        values: ghost.tBest; max: ghost.tTop; color: row.pal.series(1); lineWidth: 1
+        values: ghost.tBest; max: ghost.tTop; color: row.pal.series(1); lineWidth: 1; peaks: 1
         format: function(v) { return row.tokens(v) }
       }
       Spark {
         visible: ghostLegend.on("yest")
         width: parent.width * Math.max(1, ghost.tYest.length - 1) / 24; height: parent.height; fill: false
-        values: ghost.tYest; max: ghost.tTop; color: row.pal.series(2); lineWidth: 1
+        values: ghost.tYest; max: ghost.tTop; color: row.pal.series(2); lineWidth: 1; peaks: 1
         format: function(v) { return row.tokens(v) }
       }
       Spark {
         visible: ghostLegend.on("today")
         width: parent.width * Math.max(1, ghost.tToday.length - 1) / 24; height: parent.height
-        values: ghost.tToday; max: ghost.tTop; color: row.pal.series(0); lineWidth: 1.6
+        values: ghost.tToday; max: ghost.tTop; color: row.pal.series(0); lineWidth: 1.6; peaks: 3
         format: function(v) { return row.tokens(v) }
       }
     }
@@ -448,8 +448,8 @@ Item {
       y: 24; width: parent.width; height: 58
       readonly property real topV: Math.max(50000, Math.max.apply(null,
         (netLegend.on("down") ? row.sys.downHist : []).concat(netLegend.on("up") ? row.sys.upHist : [], [1])) * 1.1)
-      Spark { visible: netLegend.on("down"); anchors.fill: parent; values: row.sys.downHist; max: parent.topV; color: row.pal.series(0); format: function(v) { return row.sys.bits(v) } }
-      Spark { visible: netLegend.on("up"); anchors.fill: parent; values: row.sys.upHist; max: parent.topV; color: row.pal.series(1); fill: false; lineWidth: 1; format: function(v) { return row.sys.bits(v) } }
+      Spark { visible: netLegend.on("down"); anchors.fill: parent; values: row.sys.downHist; max: parent.topV; color: row.pal.series(0); peaks: 3; format: function(v) { return row.sys.bits(v) } }
+      Spark { visible: netLegend.on("up"); anchors.fill: parent; values: row.sys.upHist; max: parent.topV; color: row.pal.series(1); peaks: 2; fill: false; lineWidth: 1; format: function(v) { return row.sys.bits(v) } }
     }
     Column {
       y: 88; width: parent.width
@@ -511,8 +511,8 @@ Item {
         }
         return out
       }
-      Spark { visible: battLegend.on("watts"); anchors.fill: parent; values: parent.series(row.sys.batDay.rate, 40); color: row.pal.series(1); fill: false; lineWidth: 1; format: function(v) { return (v * 40).toFixed(1) + " W" } }
-      Spark { visible: battLegend.on("charge"); anchors.fill: parent; values: parent.series(row.sys.batDay.charge, 100); color: row.pal.series(0); format: function(v) { return Math.round(v * 100) + "%" } }
+      Spark { visible: battLegend.on("watts"); anchors.fill: parent; values: parent.series(row.sys.batDay.rate, 40); color: row.pal.series(1); peaks: 3; fill: false; lineWidth: 1; format: function(v) { return (v * 40).toFixed(1) + " W" } }
+      Spark { visible: battLegend.on("charge"); anchors.fill: parent; values: parent.series(row.sys.batDay.charge, 100); color: row.pal.series(0); peaks: 2; format: function(v) { return Math.round(v * 100) + "%" } }
     }
     Legend {
       id: battLegend
