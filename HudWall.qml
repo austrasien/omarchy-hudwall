@@ -88,7 +88,7 @@ Item {
     if (wantActive) { settle.stop(); active = true }
     else settle.restart()
   }
-  Component.onCompleted: active = wantActive
+  Component.onCompleted: { active = wantActive; barSync.restart() }
   Timer { id: settle; interval: 3000; onTriggered: root.active = root.wantActive }
 
   // Hyprland only sends toplevel events; refresh the IPC objects so
@@ -128,22 +128,16 @@ Item {
     }
   }
 
-  // The status pill, top left, while the HUD is covered: the Omarchy bar is
-  // off, so this is what is left of it over the windows.
-  PanelWindow {
-    screen: root.targetScreen
-    visible: root.cfg.visible && root.targetScreen !== null && !root.wantActive && root.cfg.pill !== false
-    color: "transparent"
-    anchors { top: true; left: true }
-    margins { top: 6; left: 52 }
-    implicitWidth: statusPill.implicitWidth
-    implicitHeight: statusPill.implicitHeight
-    WlrLayershell.namespace: "austraz-hudwall-pill"
-    WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    exclusionMode: ExclusionMode.Ignore
-    exclusiveZone: 0
-    StatusPill { id: statusPill; anchors.fill: parent }
+  // The Omarchy bar shows only on the HUD: on an empty desk it comes back
+  // with all its icons and menus, over windows it stays hidden.
+  // cfg.barOnHud = false leaves the bar alone.
+  readonly property bool barShown: cfg.visible && cfg.barOnHud !== false && wantActive
+  onBarShownChanged: barSync.restart()
+  Timer {
+    id: barSync
+    interval: 150
+    onTriggered: if (root.cfg.barOnHud !== false)
+      Quickshell.execDetached(["omarchy", "toggle", "bar", root.barShown ? "off" : "on"])
   }
 
   // A window with the same HUD, to look at it without emptying a desk.
