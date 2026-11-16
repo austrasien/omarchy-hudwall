@@ -70,6 +70,28 @@ Item {
     mipmap: false
   }
 
+  // The heat of each place the peers are in: the bytes exchanged with it,
+  // on a log scale against the busiest (a place barely used still glows).
+  readonly property var heat: {
+    var by = {}
+    var list = globe.peers || []
+    for (var i = 0; i < list.length; i++) {
+      var pe = list[i]
+      if (pe.own || pe.lat === undefined || pe.lon === undefined) continue
+      var key = Math.round(pe.lon) + "," + Math.round(pe.lat)
+      if (!by[key]) by[key] = { lon: pe.lon, lat: pe.lat, bytes: 0 }
+      by[key].bytes += pe.bytes || 0
+    }
+    var out = Object.keys(by).map(function(k) { return by[k] })
+    out.sort(function(a, b) { return b.bytes - a.bytes })
+    out = out.slice(0, 10)
+    var top = out.length ? Math.log(out[0].bytes + 1) : 1
+    return out.map(function(h) {
+      return Qt.vector4d(h.lon, h.lat, Math.max(0.15, top > 0 ? Math.log(h.bytes + 1) / top : 0.15), 0)
+    })
+  }
+  function heatAt(i) { return i < heat.length ? heat[i] : Qt.vector4d(0, 0, 0, 0) }
+
   ShaderEffect {
     anchors.fill: parent
     fragmentShader: Qt.resolvedUrl("shaders/globe.frag.qsb")
@@ -86,6 +108,18 @@ Item {
     property color oceanColor: Qt.darker(globe.pal.bg, 1.15)
     property color gridColor: globe.pal.alpha(globe.pal.acc, 0.12)
     property color rimColor: globe.pal.alpha(globe.pal.acc, 0.55)
+    property color heatWarm: globe.pal.series(2)
+    property color heatHot: globe.pal.series(4)
+    property vector4d h0: globe.heatAt(0)
+    property vector4d h1: globe.heatAt(1)
+    property vector4d h2: globe.heatAt(2)
+    property vector4d h3: globe.heatAt(3)
+    property vector4d h4: globe.heatAt(4)
+    property vector4d h5: globe.heatAt(5)
+    property vector4d h6: globe.heatAt(6)
+    property vector4d h7: globe.heatAt(7)
+    property vector4d h8: globe.heatAt(8)
+    property vector4d h9: globe.heatAt(9)
   }
 
   // Orthographic projection, the same as the shader's: [x, y, visible].

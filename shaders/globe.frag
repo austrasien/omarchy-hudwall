@@ -22,11 +22,29 @@ layout(std140, binding = 0) uniform buf {
     vec4 oceanColor;
     vec4 gridColor;
     vec4 rimColor;
+    // Heat: up to ten places (lon, lat, weight 0..1, unused) and the ramp
+    // they colour the land dots with, warm to hot.
+    vec4 heatWarm;
+    vec4 heatHot;
+    vec4 h0; vec4 h1; vec4 h2; vec4 h3; vec4 h4;
+    vec4 h5; vec4 h6; vec4 h7; vec4 h8; vec4 h9;
 };
 layout(binding = 1) uniform sampler2D land;
 
 const float PI = 3.14159265358979;
 const float D2R = PI / 180.0;
+
+// Great-circle distance in degrees.
+float arcDeg(float lon1, float lat1, float lon2, float lat2) {
+    float c = sin(lat1 * D2R) * sin(lat2 * D2R) + cos(lat1 * D2R) * cos(lat2 * D2R) * cos((lon1 - lon2) * D2R);
+    return acos(clamp(c, -1.0, 1.0)) / D2R;
+}
+// A place's warmth at a point: its weight, fading over about 10 degrees.
+float warmth(vec4 h, float lon, float lat) {
+    if (h.z <= 0.0) return 0.0;
+    float d = arcDeg(lon, lat, h.x, h.y) / 9.0;
+    return h.z * exp(-d * d);
+}
 
 void main() {
     vec2 p = qt_TexCoord0 * 2.0 - 1.0;
@@ -80,6 +98,17 @@ void main() {
                   + cos(rowLat * D2R) * cos(sunLat * D2R) * cos((cellLon - sunLon) * D2R);
         float day = smoothstep(-0.08, 0.08, sun);
         vec4 c = mix(nightColor, dayColor, day);
+        // The heat of the data exchanged around: warm, then hot.
+        float heat = warmth(h0, cellLon, rowLat) + warmth(h1, cellLon, rowLat) + warmth(h2, cellLon, rowLat)
+                   + warmth(h3, cellLon, rowLat) + warmth(h4, cellLon, rowLat) + warmth(h5, cellLon, rowLat)
+                   + warmth(h6, cellLon, rowLat) + warmth(h7, cellLon, rowLat) + warmth(h8, cellLon, rowLat)
+                   + warmth(h9, cellLon, rowLat);
+        heat = clamp(heat, 0.0, 1.0);
+        if (heat > 0.02) {
+            vec3 ramp = mix(heatWarm.rgb, heatHot.rgb, smoothstep(0.35, 1.0, heat));
+            float lit = mix(0.55, 1.0, day);
+            c = vec4(mix(c.rgb, ramp * lit, smoothstep(0.02, 0.3, heat)), max(c.a, 0.9));
+        }
         float k = dotA * isLand * c.a;
         rgb = mix(rgb, c.rgb, k);
     }

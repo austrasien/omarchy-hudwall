@@ -441,13 +441,16 @@ def public(ip):
 
 
 class Peers:
-    """The last ten public peers this machine opened a TCP connection to."""
+    """The last ten public peers this machine opened a TCP connection to,
+    with the bytes exchanged with each (sent + received, added up from the
+    sockets' counters between samples)."""
 
     PATH = os.path.join(STATE, "peers.json")
 
     def __init__(self):
         self.geo = Geo()
-        self.seen = []  # newest first: {ip, port, proc, first, last, ...geo}
+        self.seen = []  # newest first: {ip, port, proc, first, last, bytes, ...geo}
+        self.sockets = {}  # "local peer" -> bytes counted so far
         # The list outlives the collector, which only runs while the HUD shows.
         try:
             with open(self.PATH) as f:
@@ -473,14 +476,27 @@ class Peers:
 
     def sample(self, now):
         try:
-            r = subprocess.run(["ss", "-tnpH", "state", "established"], capture_output=True, text=True, timeout=3)
+            r = subprocess.run(["ss", "-tinpH", "state", "established"], capture_output=True, text=True, timeout=3)
         except (OSError, subprocess.SubprocessError):
             return None
         live = {}
-        for line in r.stdout.splitlines():
+        moved = {}       # ip -> bytes since the last sample
+        sockets = {}
+        lines = r.stdout.splitlines()
+        for n, line in enumerate(lines):
+            if line[:1].isspace():
+                continue
             f = line.split()
             if len(f) < 4:
                 continue
+            info = lines[n + 1] if n + 1 < len(lines) and lines[n + 1][:1].isspace() else ""
+            total = 0
+            for key in ("bytes_sent", "bytes_received"):
+                m = re.search(key + r":(\d+)", info)
+                if m:
+                    total += int(m.group(1))
+            sock = f[2] + " " + f[3]
+            sockets[sock] = total
             peer = f[3]
             ip, _, port = peer.rpartition(":")
             ip = ip.strip("[]")
@@ -490,15 +506,20 @@ class Peers:
                 continue
             m = re.search(r'users:\(\("([^"]+)"', line)
             live.setdefault(ip, (port, m.group(1) if m else ""))
+            moved[ip] = moved.get(ip, 0) + max(0, total - self.sockets.get(sock, 0))
+        self.sockets = sockets
         index = {p["ip"]: p for p in self.seen}
         changed = False
         for ip, (port, proc) in live.items():
             if ip in index:
                 index[ip]["last"] = now
                 index[ip]["live"] = True
+                if moved.get(ip):
+                    index[ip]["bytes"] = index[ip].get("bytes", 0) + moved[ip]
+                    changed = True
                 continue
             entry = {"ip": ip, "port": int(port) if port.isdigit() else 0, "proc": group_of(proc) if proc else "",
-                     "first": now, "last": now, "live": True}
+                     "first": now, "last": now, "live": True, "bytes": moved.get(ip, 0)}
             loc = self.geo.locate(ip)
             if loc:
                 entry.update(loc)
