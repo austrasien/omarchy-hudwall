@@ -84,7 +84,8 @@ Item {
   }
   property bool previewOpen: false
   // Super+H held: the HUD comes over the windows until the key is let go,
-  // lifting like a fog of war (shaders/fog.frag), and closing back faster.
+  // coming up like an old VHS tape whose grid drops out tile by tile
+  // (shaders/fog.frag), and closing back faster.
   property bool peeking: false
   property bool overWindows: false
   property real reveal: 1
@@ -100,7 +101,7 @@ Item {
       hideFog.restart()
     }
   }
-  NumberAnimation { id: showFog; target: root; property: "reveal"; from: 0; to: 1; duration: 900; easing.type: Easing.OutCubic }
+  NumberAnimation { id: showFog; target: root; property: "reveal"; from: 0; to: 1; duration: 1100; easing.type: Easing.InOutQuad }
   SequentialAnimation {
     id: hideFog
     NumberAnimation { target: root; property: "reveal"; to: 0; duration: 320; easing.type: Easing.InCubic }
