@@ -164,10 +164,9 @@ Item {
     readonly property var now: row.p && row.p.coffee ? row.p.coffee : (cd ? cd.coffee : null)
     note: now ? now.cupsToday + (now.cupsToday === 1 ? " cup" : " cups") : ""
 
-    HoverHandler { id: coffeeHover }
     // Logging a past cup: a time field, open until done or Escape.
     property bool logging: false
-    readonly property bool showButtons: coffeeHover.hovered || logging
+    readonly property bool showButtons: coffee.hovered || logging
     function logAt(text) {
       var m = text.trim().match(/^(\d{1,2})(?:[:h.]?(\d{2}))?$/)
       if (!m || +m[1] > 23 || +(m[2] || 0) > 59) { timeField.color = row.pal.red; return }
@@ -194,10 +193,10 @@ Item {
       Row {
         visible: coffee.showButtons && !coffee.logging
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 6
-        HButton { pal: row.pal; text: "☕ Have a coffee"; size: 8; onClicked: row.prom.act("coffee:add", []) }
-        HButton { pal: row.pal; tone: "g"; text: "Log a coffee"; size: 8; onClicked: { coffee.logging = true; timeField.text = ""; timeField.color = row.pal.fg; timeField.forceActiveFocus() } }
-        HButton { pal: row.pal; tone: "g"; text: "undo"; size: 8; visible: !!(coffee.now && coffee.now.canUndo); onClicked: row.prom.act("coffee:undo", []) }
+        spacing: 4
+        HButton { pal: row.pal; text: "☕ now"; size: 7; onClicked: row.prom.act("coffee:add", []) }
+        HButton { pal: row.pal; tone: "g"; text: "log earlier"; size: 7; onClicked: { coffee.logging = true; timeField.text = ""; timeField.color = row.pal.fg; timeField.forceActiveFocus() } }
+        HButton { pal: row.pal; tone: "g"; text: "↶ undo"; size: 7; visible: !!(coffee.now && coffee.now.canUndo); onClicked: row.prom.act("coffee:undo", []) }
       }
       Row {
         visible: coffee.logging

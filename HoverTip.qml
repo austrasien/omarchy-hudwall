@@ -19,6 +19,9 @@ Item {
   readonly property bool shown: open && text.length > 0
 
   anchors.fill: parent
+  // Under the content it covers, so the buttons and hover zones inside keep
+  // the pointer; above it while the box shows.
+  z: shown ? 100 : -1
 
   HoverHandler { id: hover; onHoveredChanged: if (!hovered) tip.open = false }
   TapHandler {

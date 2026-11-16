@@ -114,8 +114,9 @@ Item {
 
     WlrLayershell.namespace: "austraz-hudwall"
     WlrLayershell.layer: WlrLayer.Bottom
-    // The task field asks for the keyboard only while it is being typed in.
-    WlrLayershell.keyboardFocus: hud.wantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // On an empty desk, a click on the HUD can take the keyboard (its fields:
+    // tasks, a coffee's time); a field asking for it keeps it while typed in.
+    WlrLayershell.keyboardFocus: root.active || hud.wantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
     exclusiveZone: 0
 
@@ -167,6 +168,7 @@ Item {
       for (var i = 1; i < parts.length && o !== undefined && o !== null; i++) o = o[parts[i]]
       try { return JSON.stringify(o) } catch (e) { return String(o) }
     }
+    function hitTest(x: string, y: string): string { return hud.hitTest(Number(x), Number(y)) }
     function status(): string {
       return JSON.stringify({ active: root.active, deskEmpty: root.deskEmpty, workspace: root.shownWorkspace, preview: root.previewOpen })
     }

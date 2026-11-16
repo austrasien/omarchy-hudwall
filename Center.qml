@@ -26,7 +26,7 @@ Item {
   // Geometry: a compact header, the session at the bottom, and the globe
   // with its rings as big as the space between allows.
   readonly property real headerH: header.height + 6
-  readonly property real sessionY: height - 64
+  readonly property real sessionY: height - sessionBlock.height - 2
   readonly property real areaTop: headerH + 4
   readonly property real areaH: sessionY - 4 - areaTop
   readonly property real gs: Math.max(0.6, Math.min(areaH, width - 10) / 540)
@@ -369,6 +369,7 @@ Item {
 
   // ------------------------------------------------------------ session
   SessionBlock {
+    id: sessionBlock
     x: center.gx - 200; y: center.sessionY; width: 400
     pal: center.pal
     prom: center.prom

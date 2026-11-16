@@ -45,6 +45,18 @@ Item {
   readonly property bool lowPower: sys.bat.status === "Discharging" && sys.bat.pct !== undefined && sys.bat.pct <= 15
   Sys { id: sys; active: hud.active }
   Prom { id: prom; active: hud.active }
+  // For development: the chain of topmost items at a screen point.
+  function hitTest(x, y) {
+    var out = [], it = hud, px = x, py = y
+    for (var d = 0; d < 30 && it; d++) {
+      var c = it.childAt(px, py)
+      if (!c) break
+      var pt = it.mapToItem(c, px, py)
+      out.push(String(c).split("(")[0].replace(/_QMLTYPE_\d+/, "") + " z" + c.z + " @" + Math.round(pt.x) + "," + Math.round(pt.y) + " in " + Math.round(c.width) + "x" + Math.round(c.height))
+      it = c; px = pt.x; py = pt.y
+    }
+    return out.join(" > ")
+  }
   readonly property var promData: prom
   readonly property var sysData: sys
 

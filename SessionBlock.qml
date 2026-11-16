@@ -12,7 +12,9 @@ Item {
   readonly property var p: prom.p
   property bool wantsKeyboard: false
 
-  height: 64
+  // As tall as its content, so the tasks chip at the bottom stays inside
+  // (the pointer does not reach what overflows).
+  height: content.implicitHeight + 12
 
   readonly property var session: p ? p.session : null
   readonly property bool paused: !!(p && p.paused)
@@ -25,6 +27,7 @@ Item {
   readonly property bool hot: hover.hovered || controlsHover.hovered
 
   Column {
+    id: content
     width: parent.width
     spacing: 2
 
