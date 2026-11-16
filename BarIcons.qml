@@ -81,15 +81,35 @@ HPanel {
     { glyph: g(0xF030C), value: layout || "kbd", target: "" }
   ]
 
-  Flow {
+  // A regular grid over the whole body: the column count that gives the
+  // biggest cells; icons scale with the cells, text with their width.
+  readonly property int trayCount: SystemTray.items.values ? SystemTray.items.values.length : 0
+  readonly property int count: cells.length + trayCount
+  readonly property real bodyW: width - 2 * pad
+  readonly property real bodyH: height - bodyTop - pad
+  readonly property int cols: {
+    var best = 1, bestK = 0
+    for (var c = 1; c <= count; c++) {
+      var r = Math.ceil(count / c)
+      var k = Math.min(bodyW / c, bodyH / r) / 26
+      if (k > bestK) { bestK = k; best = c }
+    }
+    return best
+  }
+  readonly property real cellW: bodyW / cols
+  readonly property real cellH: bodyH / Math.ceil(count / cols)
+  readonly property real f: Math.min(cellW, cellH) / 26
+
+  Grid {
     width: parent.width
-    spacing: 4
+    columns: bar.cols
+    spacing: 0
     Repeater {
       model: bar.cells
       Item {
         id: cell
         required property var modelData
-        width: modelData.text ? 36 : 26; height: 26
+        width: bar.cellW; height: bar.cellH
         Rectangle {
           anchors.fill: parent
           radius: 3
@@ -97,10 +117,10 @@ HPanel {
         }
         HText {
           anchors.horizontalCenter: parent.horizontalCenter
-          y: 1
+          y: (bar.cellH - 26 * bar.f) / 2 + bar.f
           text: cell.modelData.glyph
           color: cell.modelData.on === false ? bar.pal.mut : bar.pal.fg
-          font.pixelSize: cell.modelData.text ? 12 : 14
+          font.pixelSize: Math.round(cell.modelData.text ? Math.min(12 * bar.f, bar.cellW / 3.4) : 14 * bar.f)
           font.weight: cell.modelData.text ? Font.DemiBold : Font.Normal
         }
         HText {
@@ -108,7 +128,7 @@ HPanel {
           anchors.bottom: parent.bottom
           width: parent.width; horizontalAlignment: Text.AlignHCenter
           text: cell.modelData.value
-          color: bar.pal.dim; font.pixelSize: 7
+          color: bar.pal.dim; font.pixelSize: Math.max(7, Math.round(7 * bar.f))
         }
         MouseArea {
           id: area
@@ -131,12 +151,12 @@ HPanel {
       Item {
         id: trayItem
         required property var modelData
-        width: 26; height: 26
+        width: bar.cellW; height: bar.cellH
         IconImage {
           id: trayIcon
           anchors.horizontalCenter: parent.horizontalCenter
-          y: 2
-          implicitSize: 14
+          y: (bar.cellH - 26 * bar.f) / 2 + 2 * bar.f
+          implicitSize: Math.round(14 * bar.f)
           source: trayItem.modelData.icon
           visible: false
           layer.enabled: true
@@ -162,7 +182,7 @@ HPanel {
           anchors.bottom: parent.bottom
           width: parent.width; horizontalAlignment: Text.AlignHCenter
           text: String(trayItem.modelData.title || trayItem.modelData.id || "").toLowerCase()
-          color: bar.pal.dim; font.pixelSize: 7
+          color: bar.pal.dim; font.pixelSize: Math.max(7, Math.round(7 * bar.f))
         }
         MouseArea {
           anchors.fill: parent
