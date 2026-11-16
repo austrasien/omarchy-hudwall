@@ -139,6 +139,12 @@ Item {
     onTriggered: Quickshell.execDetached(["omarchy-shell", "omarchy.bar", "hudDock", root.dockJson])
   }
 
+  // Prometheus' messages over every window, hanging from the top edge.
+  Herald {
+    prom: hud.promData
+    targetScreen: root.targetScreen
+  }
+
   // A window with the same HUD, to look at it without emptying a desk.
   FloatingWindow {
     id: preview
