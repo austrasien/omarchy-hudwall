@@ -117,7 +117,10 @@ HPanel {
         }
         HText {
           anchors.horizontalCenter: parent.horizontalCenter
-          y: (bar.cellH - 26 * bar.f) / 2 + bar.f
+          // Text cells (time, temperature) have no caption: centred on the
+          // icons' glyph line instead of sitting at its top.
+          readonly property real iconY: (bar.cellH - 26 * bar.f) / 2 + bar.f
+          y: cell.modelData.text ? iconY + (14 * bar.f * 1.32 - implicitHeight) / 2 : iconY
           text: cell.modelData.glyph
           color: cell.modelData.on === false ? bar.pal.mut : bar.pal.fg
           font.pixelSize: Math.round(cell.modelData.text ? Math.min(12 * bar.f, bar.cellW / 3.4) : 14 * bar.f)
