@@ -25,9 +25,11 @@ Item {
   function pct(v) { return Math.round(v * 100) + "%" }
 
   // ---------------------------------------------------------- bar icons
+  property int barIconsTest: 0
   BarIcons {
     pal: col.pal
     sys: col.sys
+    testExtra: col.barIconsTest
     width: col.width; height: 106
     tip: "The Omarchy bar's widgets, the bar itself being hidden: clock, weather, world clocks, volume, Bluetooth, Tailscale, NordVPN, agents, Prometheus, screens, CamGuard, Flux, then the system tray (network and battery: click their panels at the bottom). Click a cell to open that widget's panel, beside this widget; tray icons: click, middle click, right click for their menu."
   }

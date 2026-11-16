@@ -95,7 +95,11 @@ HPanel {
   }
 
   // One cell per widget of the bar, in its order.
-  readonly property var cells: [
+  // For testing pages: `omarchy-shell austraz.hudwall barIconsTest N` adds N
+  // dummy cells.
+  property int testExtra: 0
+  readonly property var cells: baseCells.concat(Array.from({ length: testExtra }, function(_, k) { return { glyph: "•", value: "test " + (k + 1) } }))
+  readonly property var baseCells: [
     { glyph: Qt.formatTime(now, "HH"), value: Qt.formatTime(now, "mm"), target: "austraz.clock", bold: true },
     { glyph: weatherGlyph(weather), value: weather ? Math.round(weather.tempC) + "°" : "–", target: "omarchy.weather" },
     { glyph: g(0xF0EF2), value: "zones", target: "omarchy.elsewhen" },
@@ -117,7 +121,7 @@ HPanel {
   readonly property int count: cells.length + trayCount
   readonly property real bodyW: width - 2 * pad
   readonly property real bodyH: height - bodyTop - pad
-  readonly property int cols: {
+  readonly property int autoCols: {
     var best = 1, bestK = 0
     for (var c = 1; c <= count; c++) {
       var r = Math.ceil(count / c)
@@ -126,18 +130,54 @@ HPanel {
     }
     return best
   }
+
+  // Pages: icons never get smaller than `fMin`. When they do not all fit
+  // at that size, the grid stays at its fullest (maxCols x maxRows) and
+  // pages: the first gives up its right column to a › arrow, the last its
+  // left column to a ‹ arrow, a middle page both; under the arrow, the page
+  // (1/3). The wheel turns pages too.
+  readonly property real fMin: 1.3
+  readonly property int maxCols: Math.max(1, Math.floor(bodyW / (26 * fMin)))
+  readonly property int maxRows: Math.max(1, Math.floor(bodyH / (26 * fMin)))
+  readonly property bool paged: count > maxCols * maxRows && maxCols >= 3
+  // Icons per page, page by page.
+  readonly property var pageSizes: {
+    if (!paged) return [count]
+    var first = (maxCols - 1) * maxRows, middle = (maxCols - 2) * maxRows
+    var out = [first], left = count - first
+    while (left > first) { out.push(middle); left -= middle }
+    out.push(left)
+    return out
+  }
+  readonly property int pages: pageSizes.length
+  property int page: 0
+  onPagesChanged: page = Math.min(page, pages - 1)
+  readonly property int pageStart: { var n = 0; for (var i = 0; i < page; i++) n += pageSizes[i]; return n }
+  readonly property bool hasPrev: paged && page > 0
+  readonly property bool hasNext: paged && page < pages - 1
+  // The columns this page's icons use.
+  readonly property int firstCol: hasPrev ? 1 : 0
+  readonly property int usedCols: paged ? maxCols - (hasPrev ? 1 : 0) - (hasNext ? 1 : 0) : autoCols
+  readonly property int perPage: paged ? pageSizes[page] : count
+
+  readonly property int cols: paged ? maxCols : autoCols
+  readonly property int rowsN: paged ? maxRows : Math.ceil(count / cols)
   readonly property real cellW: bodyW / cols
-  readonly property real cellH: bodyH / Math.ceil(count / cols)
+  readonly property real cellH: bodyH / rowsN
   readonly property real f: Math.min(cellW, cellH) / 26
 
-  // Cell i's place: rows left to right, the last row centred.
-  readonly property int rowsN: Math.ceil(count / cols)
+  // Item i's place on its page: rows left to right, the last row centred
+  // in the page's columns; off its page, hidden.
+  function shown(i) { return i >= pageStart && i < pageStart + perPage }
   function cellX(i) {
-    var r = Math.floor(i / cols)
-    var inRow = r === rowsN - 1 ? count - r * cols : cols
-    return (cols - inRow) * cellW / 2 + (i - r * cols) * cellW
+    var j = i - pageStart
+    var r = Math.floor(j / usedCols)
+    var lastRow = Math.ceil(perPage / usedCols) - 1
+    var inRow = r === lastRow ? perPage - r * usedCols : usedCols
+    return (firstCol + (usedCols - inRow) / 2 + (j - r * usedCols)) * cellW
   }
-  function cellY(i) { return Math.floor(i / cols) * cellH }
+  function cellY(i) { return Math.floor((i - pageStart) / usedCols) * cellH }
+  function turn(d) { page = Math.max(0, Math.min(pages - 1, page + d)) }
 
   Item {
     anchors.fill: parent
@@ -147,6 +187,7 @@ HPanel {
         id: cell
         required property var modelData
         required property int index
+        visible: bar.shown(index)
         x: bar.cellX(index); y: bar.cellY(index)
         width: bar.cellW; height: bar.cellH
         Rectangle {
@@ -204,6 +245,56 @@ HPanel {
         }
       }
     }
+    // The page arrows, each a whole column, the page under the one that
+    // leads on (under ‹ on the last page).
+    Repeater {
+      model: bar.paged ? [-1, 1] : []
+      Item {
+        id: arrow
+        required property var modelData
+        readonly property bool next: modelData > 0
+        visible: next ? bar.hasNext : bar.hasPrev
+        x: next ? (bar.cols - 1) * bar.cellW : 0
+        width: bar.cellW; height: bar.bodyH
+        Rectangle {
+          anchors.fill: parent; radius: 3
+          color: arrowArea.containsMouse ? bar.pal.alpha(bar.pal.acc, 0.16) : "transparent"
+        }
+        HText {
+          anchors.centerIn: parent
+          anchors.verticalCenterOffset: -6 * bar.f
+          text: arrow.next ? bar.g(0xF0142) : bar.g(0xF0141)
+          color: bar.pal.acc
+          font.pixelSize: Math.round(16 * bar.f)
+        }
+        HText {
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.verticalCenterOffset: 10 * bar.f
+          visible: arrow.next || !bar.hasNext
+          text: (bar.page + 1) + "/" + bar.pages
+          color: bar.pal.dim; font.pixelSize: Math.max(7, Math.round(7 * bar.f))
+        }
+        MouseArea {
+          id: arrowArea
+          anchors.fill: parent
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onClicked: bar.turn(arrow.next ? 1 : -1)
+        }
+      }
+    }
+    // The wheel turns pages.
+    // A notch (120) a page, touchpad strokes adding up.
+    WheelHandler {
+      enabled: bar.paged
+      property real acc: 0
+      onWheel: function(event) {
+        acc += event.angleDelta.y || event.angleDelta.x
+        if (Math.abs(acc) >= 120) { bar.turn(acc < 0 ? 1 : -1); acc = 0 }
+      }
+    }
+
     // The system tray.
     Repeater {
       model: SystemTray.items
@@ -211,6 +302,7 @@ HPanel {
         id: trayItem
         required property var modelData
         required property int index
+        visible: bar.shown(bar.cells.length + index)
         x: bar.cellX(bar.cells.length + index); y: bar.cellY(bar.cells.length + index)
         width: bar.cellW; height: bar.cellH
         IconImage {

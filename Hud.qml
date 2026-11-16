@@ -43,6 +43,7 @@ Item {
   readonly property real globeY: edge + center.gy
 
   property string paletteFile: ""
+  property int barIconsTest: 0
   HudPalette { id: theme; colorsFile: hud.paletteFile }
   readonly property color accent: theme.acc
   // On a low battery the HUD stays up but stops moving.
@@ -121,6 +122,7 @@ Item {
       pixelScale: hud.pixelScale
     }
     SysRight {
+      barIconsTest: hud.barIconsTest
       x: hud.stageW - hud.mR - hud.colW; y: hud.edge
       width: hud.colW
       pal: theme; sys: sys; prom: prom

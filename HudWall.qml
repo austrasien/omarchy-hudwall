@@ -293,6 +293,8 @@ Item {
       hud.promData.geekDate = state === "on" ? ["towel", "Towel Day", "Carry a towel all day, for Douglas Adams.", "Don't panic"] : null
       return state
     }
+    // `barIconsTest N`: N dummy cells in the bar icons (to see its pages).
+    function barIconsTest(n: string): string { hud.barIconsTest = parseInt(n) || 0; return String(hud.barIconsTest) }
     function hitTest(x: string, y: string): string { return hud.hitTest(Number(x), Number(y)) }
     function heraldTest(kind: string): string { return herald.test(kind) }
     function status(): string {
