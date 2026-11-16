@@ -41,9 +41,12 @@ Item {
     return m.name + ((m.count || 1) > 1 ? " ×" + m.count : "") + (m.desc ? " · " + m.desc : "")
       + (m.current ? " · won " + (m.period === "day" ? "today" : m.period === "week" ? "this week" : "this month") : "")
   }
-  // The ribbon under the pointer, and where it sits in the rack.
-  property var hoveredMedal: null
-  property point hoveredAt: Qt.point(0, 0)
+  // The ribbon under the pointer, and where it sits in the rack. The ribbon
+  // item itself is kept, not its data: a ribbon rebuilt while hovered (the
+  // daemon's data changed) leaves no stale legend behind.
+  property Item hoveredRib: null
+  readonly property var hoveredMedal: hoveredRib && hoveredRib.hot ? hoveredRib.modelData : null
+  readonly property point hoveredAt: hoveredRib ? hoveredRib.mapToItem(rack, hoveredRib.width / 2, hoveredRib.height) : Qt.point(0, 0)
 
   readonly property int attributions: all.reduce(function(a, m) { return a + (m.count || 1) }, 0)
 
@@ -112,16 +115,13 @@ Item {
           }
           // A MouseArea, not a HoverHandler: on the HUD's layer surface only
           // MouseAreas get the pointer's hover reliably.
+          readonly property bool hot: ribArea.containsMouse
           MouseArea {
+            id: ribArea
             anchors.fill: parent
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
-            onContainsMouseChanged: {
-              if (containsMouse) {
-                rack.hoveredMedal = rib.modelData
-                rack.hoveredAt = rib.mapToItem(rack, rib.width / 2, rib.height)
-              } else if (rack.hoveredMedal === rib.modelData) rack.hoveredMedal = null
-            }
+            onContainsMouseChanged: if (containsMouse) rack.hoveredRib = rib
           }
         }
       }
