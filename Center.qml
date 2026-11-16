@@ -67,12 +67,28 @@ Item {
     z: 5
     x: 0; width: center.width; y: 0
     spacing: 6
-    HText {
-      width: parent.width
-      horizontalAlignment: Text.AlignHCenter
-      text: Qt.locale("en_GB").toString(new Date(), "dddd d MMMM yyyy").toUpperCase()
-        + (center.prom.geekDate ? "  ·  " + center.prom.geekDate[1].toUpperCase() : "")
-      color: center.pal.dim; font.pixelSize: 9; font.letterSpacing: 3
+    // The date, and on a geek day its name beside it, standing out.
+    Row {
+      anchors.horizontalCenter: parent.horizontalCenter
+      spacing: 10
+      HText {
+        anchors.verticalCenter: parent.verticalCenter
+        text: Qt.locale("en_GB").toString(new Date(), "dddd d MMMM yyyy").toUpperCase()
+        color: center.pal.dim; font.pixelSize: 9; font.letterSpacing: 3
+      }
+      Rectangle {
+        visible: !!center.prom.geekDate
+        anchors.verticalCenter: parent.verticalCenter
+        width: geekName.implicitWidth + 12; height: geekName.implicitHeight + 4; radius: 2
+        color: center.pal.alpha(center.pal.series(2), 0.16)
+        border.color: center.pal.alpha(center.pal.series(2), 0.6)
+        HText {
+          id: geekName
+          anchors.centerIn: parent
+          text: center.prom.geekDate ? "✦ " + center.prom.geekDate[1].toUpperCase() : ""
+          color: center.pal.series(2); font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 2
+        }
+      }
     }
     HText {
       visible: !!center.prom.geekDate

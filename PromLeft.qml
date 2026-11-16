@@ -1,4 +1,5 @@
 import QtQuick
+import "../austraz.prometheus" as PromUi
 import QtQuick.Shapes
 import Quickshell
 
@@ -314,38 +315,22 @@ Item {
 
     Row {
       spacing: 14
-      // The season medal: ribbon and disc, bars for the goals reached.
+      // This season's medal, as Prometheus draws it: the next one to win
+      // (one bar for the goal, two for the hard goal), dull until won;
+      // under the mouse it wakes up.
       Item {
-        width: 50; height: 60
-        scale: 0.8; transformOrigin: Item.TopLeft
-        Shape {
-          anchors.fill: parent
-          preferredRendererType: Shape.CurveRenderer
-          ShapePath { strokeWidth: -1; fillColor: col.pal.mag; startX: 18; startY: 0
-            PathLine { x: 26; y: 26 } PathLine { x: 31; y: 26 } PathLine { x: 22; y: 0 } }
-          ShapePath { strokeWidth: -1; fillColor: col.pal.cyan; startX: 44; startY: 0
-            PathLine { x: 36; y: 26 } PathLine { x: 31; y: 26 } PathLine { x: 40; y: 0 } }
-        }
-        Rectangle {
-          x: 7; y: 22; width: 48; height: 48; radius: 24
-          color: col.pal.alpha(col.pal.acc, 0.2)
-          border.color: col.pal.acc; border.width: 2
-          Column {
-            anchors.centerIn: parent; spacing: 4
-            Repeater {
-              model: 2
-              Rectangle {
-                required property int index
-                width: 22; height: 3
-                color: col.pal.acc2
-                opacity: seasonPanel.s && seasonPanel.s.bars > index ? 1 : 0.2
-              }
-            }
-          }
+        width: 62; height: 60
+        PromUi.SeasonMedal {
+          anchors.centerIn: parent
+          readonly property int got: seasonPanel.s ? seasonPanel.s.bars || 0 : 0
+          bars: got >= 1 ? 2 : 1
+          won: got >= 2
+          colors: seasonPanel.s ? seasonPanel.s.colors : null
+          size: 2.2
         }
       }
       Column {
-        width: seasonPanel.width - 2 * seasonPanel.pad - 54
+        width: seasonPanel.width - 2 * seasonPanel.pad - 76
         spacing: 6
         Row {
           width: parent.width

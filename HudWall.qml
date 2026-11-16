@@ -101,7 +101,7 @@ Item {
       hideFog.restart()
     }
   }
-  NumberAnimation { id: showFog; target: root; property: "reveal"; from: 0; to: 1; duration: 1100; easing.type: Easing.InOutQuad }
+  NumberAnimation { id: showFog; target: root; property: "reveal"; from: 0; to: 1; duration: 550; easing.type: Easing.InOutQuad }
   SequentialAnimation {
     id: hideFog
     NumberAnimation { target: root; property: "reveal"; to: 0; duration: 320; easing.type: Easing.InCubic }
@@ -215,6 +215,11 @@ Item {
     }
     // `peek on` / `peek off`: bound to Super+H pressed and released.
     function peek(state: string): string { root.peeking = state === "on"; return root.peeking ? "on" : "off" }
+    // `geekTest on|off`: show a geek day in the header.
+    function geekTest(state: string): string {
+      hud.promData.geekDate = state === "on" ? ["towel", "Towel Day", "Carry a towel all day, for Douglas Adams.", "Don't panic"] : null
+      return state
+    }
     function hitTest(x: string, y: string): string { return hud.hitTest(Number(x), Number(y)) }
     function heraldTest(kind: string): string { return herald.test(kind) }
     function status(): string {
