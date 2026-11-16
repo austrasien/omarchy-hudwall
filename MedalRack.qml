@@ -172,7 +172,9 @@ Item {
     }
   }
 
+  // Under the ribbons, so their own hover legend still reaches them.
   HoverTip {
+    z: -1
     pal: rack.pal
     raiseTarget: rack.parent
     tipWidth: 340
