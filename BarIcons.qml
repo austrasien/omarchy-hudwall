@@ -53,6 +53,22 @@ HPanel {
   Timer { interval: 15000; repeat: true; running: bar.visible; triggeredOnStart: true; onTriggered: kb.running = true }
 
   function g(cp) { return String.fromCodePoint(cp) }
+  // The current weather, from its WMO code (and day or night).
+  function weatherGlyph(w) {
+    if (!w) return g(0xF0590)
+    var c = w.wmoCode, day = w.isDay !== false
+    if (c === 0) return day ? g(0xF0599) : g(0xF0594)            // clear
+    if (c <= 2) return day ? g(0xF0595) : g(0xF0F31)             // partly cloudy
+    if (c === 3) return g(0xF0590)                                // overcast
+    if (c <= 48) return g(0xF0591)                                // fog
+    if (c <= 57) return g(0xF0597)                                // drizzle
+    if (c <= 65) return c >= 63 ? g(0xF0596) : g(0xF0597)         // rain
+    if (c <= 67) return g(0xF067F)                                // freezing rain
+    if (c <= 77) return g(0xF0598)                                // snow
+    if (c <= 82) return c >= 81 ? g(0xF0596) : g(0xF0597)         // showers
+    if (c <= 86) return g(0xF0598)                                // snow showers
+    return g(0xF0593)                                             // storm
+  }
   function batteryGlyph(p, charging) {
     if (charging) return g(0xF0084)
     var steps = [0xF008E, 0xF007A, 0xF007B, 0xF007C, 0xF007D, 0xF007E, 0xF007F, 0xF0080, 0xF0081, 0xF0082, 0xF0079]
@@ -65,7 +81,7 @@ HPanel {
   // One cell per widget of the bar, in its order.
   readonly property var cells: [
     { glyph: Qt.formatTime(now, "HH:mm"), text: true, value: "", target: "austraz.clock", tip: "clock" },
-    { glyph: weather ? Math.round(weather.tempC) + "°" : "–", text: true, value: "", target: "omarchy.weather" },
+    { glyph: weatherGlyph(weather), value: weather ? Math.round(weather.tempC) + "°" : "–", target: "omarchy.weather" },
     { glyph: g(0xF0EF2), value: "zones", target: "omarchy.elsewhen" },
     { glyph: muted ? g(0xF075F) : g(0xF057E), value: muted ? "mute" : Math.round(volume * 100) + "%", target: "omarchy.audio", on: !muted },
     { glyph: sys.net.ssid ? g(0xF05A9) : g(0xF05AA), value: sys.net.ssid ? "wi-fi" : "offline", target: "omarchy.network", on: !!sys.net.iface },
