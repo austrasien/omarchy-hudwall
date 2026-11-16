@@ -57,7 +57,24 @@ keeps stale sibling components.
 ```bash
 omarchy-shell austraz.hudwall preview   # the HUD in a window, to look at it with a busy desk
 omarchy-shell austraz.hudwall status    # active, deskEmpty, workspace, preview
+omarchy-shell austraz.hudwall peek on   # the HUD over the windows (peek off: back under them)
 ```
+
+### Peek with a key held
+
+To bring the HUD over the windows while a key is held (here Super+H), in
+`~/.config/hypr/bindings.lua`:
+
+```lua
+hl.unbind("SUPER + H")
+o.bind("SUPER + H", "Peek at the HUD", hl.dsp.exec_cmd("omarchy-shell austraz.hudwall peek on"))
+o.bind("SUPER + H", "Hide the HUD", hl.dsp.exec_cmd("omarchy-shell austraz.hudwall peek off"),
+  { release = true, transparent = true, ignore_mods = true, non_consuming = true })
+```
+
+The release bind must stay `non_consuming`, or a plain H stops typing. The
+HUD comes up like an old VHS tape whose grid drops out tile by tile
+(`shaders/fog.frag`), and goes back the same way when H is let go.
 
 Clicks on Prometheus panels open the matching tab of the bar panel through
 `omarchy-shell austraz.prometheus openTab <tab>`.
@@ -72,6 +89,11 @@ collector is stopped. The globe is a fragment shader (`shaders/globe.frag`,
 compiled with
 `/usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o shaders/globe.frag.qsb shaders/globe.frag`);
 animated Canvases were far too costly (arcs alone: about 57 % of a core).
+
+Once the globe has settled on its routes it draws one frame a second (24
+while it turns): with the HUD on screen the shell then costs about 2 % of a
+core more than with it hidden. The collector reads the battery every 5 s and
+the NPU journal only after the NPU served requests.
 
 On battery at 15 % or less, the HUD stops moving.
 
