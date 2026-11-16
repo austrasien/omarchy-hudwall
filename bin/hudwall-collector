@@ -262,6 +262,50 @@ GROUPS = [
 ]
 
 
+# What the HUD's X on a group does: restart the shell (never kill the
+# compositor), restart the systemd services the group runs as, or end its
+# processes (SIGTERM). Nothing for system processes or other users'.
+NEVER = {"systemd", "(sd-pam)", "dbus-daemon", "dbus-broker", "dbus-broker-lau", "login", "agetty", "sshd"}
+UID = os.getuid()
+
+
+def unit_of(pid):
+    """The systemd unit a process runs in (user manager only), or None."""
+    for line in read(f"/proc/{pid}/cgroup").splitlines():
+        path = line.split("::", 1)[-1]
+        if f"/user@{UID}.service/" not in path:
+            return None
+        last = path.rsplit("/", 1)[-1]
+        return last if last.endswith((".service", ".scope")) else None
+    return None
+
+
+def owner(pid):
+    for line in read(f"/proc/{pid}/status").splitlines():
+        if line.startswith("Uid:"):
+            return int(line.split()[1])
+    return -1
+
+
+def action_of(name, roots, comms):
+    if name == "Hyprland + shell":
+        return {"kind": "shell"}
+    if comms & NEVER or not roots:
+        return None
+    if any(owner(p) != UID for p in roots):
+        return None
+    units = {unit_of(p) for p in roots}
+    if None in units:
+        return None
+    services = sorted(u for u in units if u.endswith(".service") and not u.startswith("app-")
+                      and not u.startswith("wayland-wm@"))
+    if services and len(services) == len(units):
+        return {"kind": "restart", "units": services}
+    if any(u.startswith("wayland-wm@") for u in units):
+        return None
+    return {"kind": "kill", "pids": [int(p) for p in roots][:64]}
+
+
 def group_of(comm):
     for rx, name in GROUPS:
         if rx.match(comm):
@@ -301,13 +345,19 @@ class Procs:
                 comm, ppid, rss = info[pid]
                 g = group_of(comm)
                 d = ticks - self.prev.get(pid, ticks)
-                e = groups.setdefault(g, {"name": g, "cpu": 0.0, "rss": 0, "count": 0})
+                e = groups.setdefault(g, {"name": g, "cpu": 0.0, "rss": 0, "count": 0, "_roots": [], "_comms": set()})
                 e["cpu"] += d / CLK / dt / ncpu
                 e["rss"] += rss
+                e["_comms"].add(comm)
                 parent = info.get(ppid)
                 if not parent or group_of(parent[0]) != g:
                     e["count"] += 1
+                    e["_roots"].append(pid)
             top = sorted(groups.values(), key=lambda e: (e["cpu"], e["rss"]), reverse=True)[:6]
+            for e in groups.values():
+                roots, comms = e.pop("_roots"), e.pop("_comms")
+                if e in top:
+                    e["action"] = action_of(e["name"], roots, comms)
             for e in top:
                 e["cpu"] = round(e["cpu"], 3)
             out = top

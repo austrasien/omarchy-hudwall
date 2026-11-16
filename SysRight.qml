@@ -384,33 +384,85 @@ Item {
 
   // --------------------------------------------------------------- apps
   HPanel {
+    id: appsPanel
     pal: col.pal
     y: 596; width: col.width; height: 116
     label: "Applications"
+    // The rows stay put under the mouse (they reorder by CPU every 3 s), so
+    // a click lands on the app that was pointed at.
+    property var rows: []
+    readonly property var live: (col.sys.procs || []).slice(0, 5)
+    onLiveChanged: if (!hovered) rows = live
+    onHoveredChanged: if (!hovered) rows = live
     note: "CPU · RAM"
-    tip: "Busiest program groups: share of the whole machine's CPU (all cores) and resident memory. ×N = number of instances."
+    tip: "Busiest program groups: share of the whole machine's CPU (all cores) and resident memory. ×N = number of instances. On hover, ✕ ends an app (SIGTERM), ↻ restarts what the system needs (its services, or the shell); click twice to confirm. The list holds still while the mouse is over it."
     tipAbove: true
     Column {
       width: parent.width
       spacing: 1
       Repeater {
-        model: (col.sys.procs || []).slice(0, 5)
-        Row {
+        model: appsPanel.rows
+        // On hover, a button at the end of the row: ✕ ends the group's
+        // processes, ↻ restarts what the system needs (its services, or the
+        // shell). A first click asks, a second within 3 s does it.
+        Item {
+          id: appRow
           required property var modelData
+          readonly property var act: modelData.action || null
+          property bool asking: false
           width: parent.width; height: 14
-          spacing: 6
-          HText {
-            width: 104; anchors.verticalCenter: parent.verticalCenter
-            text: modelData.name + (modelData.count > 1 && modelData.name !== "Hyprland + shell" ? " ×" + modelData.count : "")
-            color: col.pal.fg
+          HoverHandler { id: rowHover }
+          Timer { id: askTimer; interval: 3000; onTriggered: appRow.asking = false }
+          function run() {
+            var a = act
+            if (!a) return
+            if (a.kind === "shell") Quickshell.execDetached(["setsid", "-f", "omarchy-restart-shell"])
+            else if (a.kind === "restart") Quickshell.execDetached(["systemctl", "--user", "restart"].concat(a.units))
+            else if (a.kind === "kill") Quickshell.execDetached(["kill", "-TERM"].concat(a.pids.map(String)))
           }
-          HBar {
-            pal: col.pal
-            width: parent.width - 104 - 34 - 44 - 18; anchors.verticalCenter: parent.verticalCenter
-            value: Math.min(1, modelData.cpu * 2.5)
+          Row {
+            width: parent.width; height: parent.height
+            spacing: 6
+            HText {
+              width: 104; anchors.verticalCenter: parent.verticalCenter
+              text: appRow.modelData.name + (appRow.modelData.count > 1 && appRow.modelData.name !== "Hyprland + shell" ? " ×" + appRow.modelData.count : "")
+              color: col.pal.fg
+            }
+            HBar {
+              pal: col.pal
+              width: parent.width - 104 - 34 - 44 - 18; anchors.verticalCenter: parent.verticalCenter
+              value: Math.min(1, appRow.modelData.cpu * 2.5)
+            }
+            HText { width: 34; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: Math.round(appRow.modelData.cpu * 100) + "%"; color: col.pal.dim; font.pixelSize: 9 }
+            HText { width: 44; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: col.sys.bytes(appRow.modelData.rss); color: col.pal.dim; font.pixelSize: 9 }
           }
-          HText { width: 34; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: Math.round(modelData.cpu * 100) + "%"; color: col.pal.dim; font.pixelSize: 9 }
-          HText { width: 44; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: col.sys.bytes(modelData.rss); color: col.pal.dim; font.pixelSize: 9 }
+          Rectangle {
+            id: killBtn
+            readonly property bool restart: appRow.act && appRow.act.kind !== "kill"
+            readonly property color tone: restart ? col.pal.series(2) : col.pal.red
+            visible: !!appRow.act && (rowHover.hovered || appRow.asking)
+            anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+            width: appRow.asking ? askText.implicitWidth + 12 : 16; height: 13; radius: 2
+            color: btnArea.containsMouse ? col.pal.alpha(tone, 0.35) : col.pal.alpha(col.pal.bg, 0.92)
+            border.color: tone; border.width: 1
+            HText {
+              id: askText
+              anchors.centerIn: parent
+              text: appRow.asking ? (killBtn.restart ? "restart?" : "end?") : (killBtn.restart ? "↻" : "✕")
+              color: killBtn.tone; font.pixelSize: 9; font.weight: Font.DemiBold
+            }
+            MouseArea {
+              id: btnArea
+              anchors.fill: parent; anchors.margins: -2
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                if (!appRow.asking) { appRow.asking = true; askTimer.restart(); return }
+                askTimer.stop(); appRow.asking = false
+                appRow.run()
+              }
+            }
+          }
         }
       }
     }
