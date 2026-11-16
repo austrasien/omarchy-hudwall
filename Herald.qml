@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import QtQuick.Shapes
 import qs.Commons
 
 // Prometheus' messages over every window: avionic cards at the top of the
@@ -21,15 +22,11 @@ PanelWindow {
   screen: targetScreen
   color: "transparent"
   anchors.top: true
-  implicitWidth: 500
-  implicitHeight: stack.height + 44
   exclusionMode: ExclusionMode.Ignore
   exclusiveZone: 0
   WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.namespace: "austraz-herald"
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-  // Only the cards take the pointer.
-  mask: Region { item: stack }
 
   // ------------------------------------------------------------ content
 
@@ -128,31 +125,110 @@ PanelWindow {
     return { glyph: "•", label: k, color: pal.acc }
   }
 
-  // ------------------------------------------------------------ cards
+  // ------------------------------------------------------------ the notch
+  //
+  // A notch hanging from the top edge, like a phone's: concave shoulders
+  // meeting the edge, rounded corners below, a thin outline in the message's
+  // colour and a scale along its bottom. It grows down when a message comes,
+  // the cards sliding down inside it, and goes back up when none is left.
 
   readonly property var hp: pal
-  visible: !!questionCard.shown || !!toastCard.shown
+  readonly property bool any: !!herald.question || !!herald.current || !!questionCard.shown || !!toastCard.shown
+  readonly property real shoulder: 18
+  readonly property real pad: 22
+  readonly property real notchW: stack.width + 2 * pad
+  property real notchH: any ? stack.implicitHeight + 2 * pad - 6 : 0
+  Behavior on notchH { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
+  readonly property color ink: questionCard.shown ? questionCard.ink : toastCard.ink
+  readonly property color inkDim: Qt.tint(pal.bg, Qt.alpha(ink, 0.5))
+  readonly property color black: Qt.darker(pal.bg, 1.6)
 
-  Column {
-    id: stack
+  visible: any || notchH > 1
+  implicitWidth: notchW + 2 * shoulder + 8
+  implicitHeight: Math.max(1, notchH + 6)
+  mask: Region { item: notch }
+
+  Item {
+    id: notch
     anchors.horizontalCenter: parent.horizontalCenter
-    y: 20
-    width: 440
-    spacing: 22
-    HeraldCard {
-      id: questionCard
-      pal: herald.hp
-      msg: herald.question
-      look: herald.question ? herald.look(herald.question) : null
+    width: herald.notchW + 2 * herald.shoulder
+    height: herald.notchH
+
+    Shape {
+      id: shape
+      anchors.fill: parent
+      preferredRendererType: Shape.CurveRenderer
+      readonly property real s: herald.shoulder
+      readonly property real r: Math.min(18, herald.notchH / 2)
+      readonly property real w: width
+      readonly property real h: Math.max(0, height)
+      ShapePath {
+        fillColor: Qt.alpha(herald.black, 0.97)
+        strokeColor: herald.inkDim
+        strokeWidth: 1
+        startX: 0; startY: 0
+        // Left shoulder, concave into the edge.
+        PathQuad { x: shape.s; y: Math.min(shape.s, shape.h); controlX: shape.s; controlY: 0 }
+        PathLine { x: shape.s; y: Math.max(shape.s, shape.h - shape.r) }
+        PathQuad { x: shape.s + shape.r; y: shape.h; controlX: shape.s; controlY: shape.h }
+        PathLine { x: shape.w - shape.s - shape.r; y: shape.h }
+        PathQuad { x: shape.w - shape.s; y: Math.max(shape.s, shape.h - shape.r); controlX: shape.w - shape.s; controlY: shape.h }
+        PathLine { x: shape.w - shape.s; y: Math.min(shape.s, shape.h) }
+        PathQuad { x: shape.w; y: 0; controlX: shape.w - shape.s; controlY: 0 }
+      }
     }
-    HeraldCard {
-      id: toastCard
-      pal: herald.hp
-      msg: herald.current
-      look: herald.current ? herald.look(herald.current) : null
-      remaining: herald.remaining
-      leavingNow: leaving.running
-      onDismissed: { life.stop(); leaving.start() }
+    // Scan lines inside.
+    Image {
+      x: herald.shoulder; width: herald.notchW; height: parent.height
+      fillMode: Image.Tile
+      verticalAlignment: Image.AlignTop; horizontalAlignment: Image.AlignLeft
+      source: "data:image/svg+xml," + encodeURIComponent(
+        "<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><rect width='4' height='1' fill='"
+        + herald.ink + "' fill-opacity='0.05'/></svg>")
+    }
+    // The scale along the bottom, and its bright centre mark.
+    Item {
+      x: herald.shoulder + 26; width: herald.notchW - 52; height: 6
+      y: parent.height - 9
+      visible: herald.notchH > 30
+      Repeater {
+        model: 41
+        Rectangle {
+          required property int index
+          x: index * (parent.width - 1) / 40
+          y: index % 5 === 0 ? 0 : 3
+          width: 1; height: index % 5 === 0 ? 5 : 2
+          color: index === 20 ? herald.ink : herald.inkDim
+        }
+      }
+    }
+
+    // The cards, sliding down with the notch.
+    Item {
+      x: herald.shoulder; width: herald.notchW; height: parent.height
+      clip: true
+      Column {
+        id: stack
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: herald.notchH - implicitHeight - herald.pad + 4
+        width: 440
+        spacing: 22
+        HeraldCard {
+          id: questionCard
+          pal: herald.hp
+          msg: herald.question
+          look: herald.question ? herald.look(herald.question) : null
+        }
+        HeraldCard {
+          id: toastCard
+          pal: herald.hp
+          msg: herald.current
+          look: herald.current ? herald.look(herald.current) : null
+          remaining: herald.remaining
+          leavingNow: leaving.running
+          onDismissed: { life.stop(); leaving.start() }
+        }
+      }
     }
   }
 }
