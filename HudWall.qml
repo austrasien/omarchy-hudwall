@@ -246,16 +246,17 @@ Item {
     onTriggered: root.grabTo(job.out, root.snapshotNext)
   }
   // The current theme's, refreshed once the HUD has been seen a minute (at
-  // most every six hours, with the data of the day).
+  // most every six hours per theme, with the data of the day).
   FileView { id: themeName; path: Quickshell.env("HOME") + "/.local/state/omarchy/current/theme.name"; watchChanges: true; onFileChanged: reload() }
-  property real lastSelfSnap: 0
+  // When each theme's snapshot was last refreshed (theme name -> ms).
+  property var lastSelfSnap: ({})
   Timer {
     interval: 60000
     running: root.active && !root.overWindows && root.snapState.indexOf("rendering") !== 0
     onTriggered: {
       var name = themeName.text().trim()
-      if (!name || Date.now() - root.lastSelfSnap < 6 * 3600000) return
-      root.lastSelfSnap = Date.now()
+      if (!name || Date.now() - (root.lastSelfSnap[name] || 0) < 6 * 3600000) return
+      var m = Object.assign({}, root.lastSelfSnap); m[name] = Date.now(); root.lastSelfSnap = m
       Quickshell.execDetached(["mkdir", "-p", root.backgrounds + name])
       root.grabTo(root.backgrounds + name + "/00-hudwall.png", function() {})
     }
