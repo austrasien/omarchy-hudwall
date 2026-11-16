@@ -3,8 +3,8 @@ import Quickshell
 import Quickshell.Wayland
 import qs.Commons
 
-// Prometheus' messages over every window: a cartouche hanging from the top
-// edge of the screen. Questions waiting for an answer ("Still there?", a
+// Prometheus' messages over every window: avionic cards at the top of the
+// screen, in the side bars' style. Questions waiting for an answer ("Still there?", a
 // coffee) stay while they are asked, with their buttons; toasts (medals,
 // achievements, quests, challenges, session ends) follow one another below,
 // six seconds each (ten for an achievement), held while hovered. The bar,
@@ -21,8 +21,8 @@ PanelWindow {
   screen: targetScreen
   color: "transparent"
   anchors.top: true
-  implicitWidth: 520
-  implicitHeight: stack.height + 24
+  implicitWidth: 500
+  implicitHeight: stack.height + 44
   exclusionMode: ExclusionMode.Ignore
   exclusiveZone: 0
   WlrLayershell.layer: WlrLayer.Overlay
@@ -33,13 +33,38 @@ PanelWindow {
 
   // ------------------------------------------------------------ content
 
+  // For testing: a question shown as if Prometheus asked it; its buttons
+  // only close it (`omarchy-shell austraz.hudwall heraldTest presence|coffee|toast`).
+  property var testQuestion: null
+  function test(kind) {
+    if (kind === "presence") testQuestion = {
+      kind: "presence", title: "Still there?", text: "the session pauses in 4:59 (test)",
+      buttons: [{ text: "I'm here", act: function() { herald.testQuestion = null } }]
+    }
+    else if (kind === "coffee") testQuestion = {
+      kind: "coffee", title: "Coffee time", text: "Now: caffeine is low (test)",
+      buttons: [
+        { text: "☕ have one", act: function() { herald.testQuestion = null } },
+        { text: "not now", tone: "g", act: function() { herald.testQuestion = null } }
+      ]
+    }
+    else if (kind === "toast") prom.toast("achievement", "Test Achievement", "+0 XP · a test, nothing won", "rare")
+    else testQuestion = null
+    return kind
+  }
+
   readonly property var question: {
+    if (testQuestion) return testQuestion
     if (!p) return null
     if (p.presence) {
-      var left = p.presence.pauseAt ? Math.max(0, Math.round((p.presence.pauseAt - now) / 1000)) : -1
       return {
         kind: "presence", title: "Still there?",
-        text: left >= 0 ? "the session pauses in " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0") : "the session waits for you",
+        // Read again each second by the card (the countdown).
+        textFn: function() {
+          var pr = herald.p ? herald.p.presence : null
+          var left = pr && pr.pauseAt ? Math.max(0, Math.round((pr.pauseAt - herald.now) / 1000)) : -1
+          return left >= 0 ? "the session pauses in " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0") : "the session waits for you"
+        },
         buttons: [{ text: "I'm here", act: function() { herald.p.confirmPresence() } }]
       }
     }
@@ -106,26 +131,25 @@ PanelWindow {
   // ------------------------------------------------------------ cards
 
   readonly property var hp: pal
-  visible: !!question || !!current
+  visible: !!questionCard.shown || !!toastCard.shown
 
   Column {
     id: stack
     anchors.horizontalCenter: parent.horizontalCenter
-    width: 480
-    spacing: 8
+    y: 20
+    width: 440
+    spacing: 22
     HeraldCard {
       id: questionCard
       pal: herald.hp
       msg: herald.question
       look: herald.question ? herald.look(herald.question) : null
-      hanging: true
     }
     HeraldCard {
       id: toastCard
       pal: herald.hp
       msg: herald.current
       look: herald.current ? herald.look(herald.current) : null
-      hanging: !herald.question
       remaining: herald.remaining
       leavingNow: leaving.running
       onDismissed: { life.stop(); leaving.start() }

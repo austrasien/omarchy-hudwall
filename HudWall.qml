@@ -141,6 +141,7 @@ Item {
 
   // Prometheus' messages over every window, hanging from the top edge.
   Herald {
+    id: herald
     prom: hud.promData
     targetScreen: root.targetScreen
   }
@@ -175,6 +176,7 @@ Item {
       try { return JSON.stringify(o) } catch (e) { return String(o) }
     }
     function hitTest(x: string, y: string): string { return hud.hitTest(Number(x), Number(y)) }
+    function heraldTest(kind: string): string { return herald.test(kind) }
     function status(): string {
       return JSON.stringify({ active: root.active, deskEmpty: root.deskEmpty, workspace: root.shownWorkspace, preview: root.previewOpen })
     }
