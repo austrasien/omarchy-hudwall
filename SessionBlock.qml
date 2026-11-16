@@ -20,6 +20,9 @@ Item {
   readonly property var openTasks: prom.tasks ? prom.tasks.tasks || [] : []
 
   HoverHandler { id: hover }
+  // The controls can be wider than the block (start plus recent names):
+  // hovering them keeps them up too.
+  readonly property bool hot: hover.hovered || controlsHover.hovered
 
   Column {
     width: parent.width
@@ -38,7 +41,7 @@ Item {
     Item {
       width: parent.width; height: 32
       HText {
-        visible: !hover.hovered
+        visible: !block.hot
         anchors.centerIn: parent
         text: block.session ? block.p.formatDuration(block.p.elapsed) : "— : — —"
         color: block.session ? block.pal.fg : block.pal.mut
@@ -46,9 +49,10 @@ Item {
         font.pixelSize: 26; font.weight: Font.DemiBold; font.letterSpacing: 1
       }
       Row {
-        visible: hover.hovered
+        visible: block.hot
         anchors.centerIn: parent
         spacing: 8
+        HoverHandler { id: controlsHover }
         HButton {
           visible: !block.session
           pal: block.pal; text: "▶ start"; size: 10
