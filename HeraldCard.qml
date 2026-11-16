@@ -188,14 +188,16 @@ Item {
             Rectangle { x: parent.width - parent.tick; y: parent.height / 2; width: parent.tick; height: 1; color: card.bright }
             Rectangle { x: parent.width / 2 - 3; y: 2; width: 7; height: 3; color: card.bright }
           }
-          // Centred on the whole circle, not on the glyph's baseline.
+          // Centred on the glyph's drawn shape (its tight bounds), not on its
+          // line box: glyphs and emoji carry very different margins.
           Text {
-            anchors.fill: parent
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
+            id: badge
             text: card.shownLook ? card.shownLook.glyph : ""
             color: card.ink
             font.pixelSize: Math.round(parent.width * 0.36)
+            TextMetrics { id: badgeInk; font: badge.font; text: badge.text }
+            x: parent.width / 2 - (badgeInk.tightBoundingRect.x + badgeInk.tightBoundingRect.width / 2)
+            y: parent.height / 2 - (badge.baselineOffset + badgeInk.tightBoundingRect.y + badgeInk.tightBoundingRect.height / 2)
           }
           // A legendary achievement keeps pulsing once locked.
           Rectangle {
