@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
@@ -92,7 +93,7 @@ HPanel {
         Rectangle {
           anchors.fill: parent
           radius: 3
-          color: area.containsMouse && cell.modelData.target ? bar.pal.alpha(bar.pal.acc, 0.16) : "transparent"
+          color: area.containsMouse && area.armed && cell.modelData.target ? bar.pal.alpha(bar.pal.acc, 0.16) : "transparent"
         }
         HText {
           anchors.horizontalCenter: parent.horizontalCenter
@@ -111,11 +112,16 @@ HPanel {
         }
         MouseArea {
           id: area
+          // A panel opening over the HUD takes the pointer without a leave
+          // event: the highlight goes on click, back on the next move in.
+          property bool armed: true
           anchors.fill: parent
           hoverEnabled: true
           enabled: !!cell.modelData.target
           cursorShape: Qt.PointingHandCursor
-          onClicked: bar.open(cell.modelData.target, cell.modelData.fn, cell.modelData.args)
+          onEntered: armed = true
+          onPositionChanged: armed = true
+          onClicked: { armed = false; bar.open(cell.modelData.target, cell.modelData.fn, cell.modelData.args) }
         }
       }
     }
@@ -126,7 +132,28 @@ HPanel {
         id: trayItem
         required property var modelData
         width: 26; height: 26
-        IconImage { anchors.centerIn: parent; implicitSize: 16; source: trayItem.modelData.icon }
+        IconImage {
+          id: trayIcon
+          anchors.horizontalCenter: parent.horizontalCenter
+          y: 2
+          implicitSize: 14
+          source: trayItem.modelData.icon
+          visible: false
+        }
+        MultiEffect {
+          anchors.fill: trayIcon
+          source: trayIcon
+          colorization: 1.0
+          colorizationColor: bar.pal.fg
+          brightness: 1.0
+        }
+        HText {
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.bottom: parent.bottom
+          width: parent.width; horizontalAlignment: Text.AlignHCenter
+          text: String(trayItem.modelData.title || trayItem.modelData.id || "").toLowerCase()
+          color: bar.pal.dim; font.pixelSize: 7
+        }
         MouseArea {
           anchors.fill: parent
           acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
