@@ -139,13 +139,23 @@ HPanel {
           implicitSize: 14
           source: trayItem.modelData.icon
           visible: false
+          layer.enabled: true
+        }
+        // The icon's shape filled with the text colour, like the other cells.
+        Rectangle {
+          id: trayFill
+          anchors.fill: trayIcon
+          color: bar.pal.fg
+          visible: false
+          layer.enabled: true
         }
         MultiEffect {
           anchors.fill: trayIcon
-          source: trayIcon
-          colorization: 1.0
-          colorizationColor: bar.pal.fg
-          brightness: 1.0
+          source: trayFill
+          maskEnabled: true
+          maskSource: trayIcon
+          maskThresholdMin: 0.2
+          maskSpreadAtMin: 0.2
         }
         HText {
           anchors.horizontalCenter: parent.horizontalCenter
