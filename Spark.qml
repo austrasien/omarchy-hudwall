@@ -18,7 +18,14 @@ Shape {
   property real lineWidth: 1.2
   property int peaks: 5
   property var format: function(v) { return String(Math.round(v)) }
-  property real calloutSize: 8
+  property real calloutSize: 9
+  // Callouts of other sparks drawn over the same area, to keep clear of.
+  property var avoid: []
+  // How far above the chart a label may go (a negative y: room kept free
+  // over the chart for its labels).
+  property real labelTop: 0
+  // A label's width, guessed from its text (the font is monospace).
+  function labelW(v) { return format(v).length * calloutSize * 0.62 + 4 }
   // Values at the middle of n slots (bars) rather than spread edge to edge.
   property bool centered: false
 
@@ -46,7 +53,7 @@ Shape {
       var val = v[i] || 0
       if (val < m * 0.06) return
       if (floorY - pts[i].y < minLift) return
-      found.push({ x: pts[i].x, y: pts[i].y, v: val })
+      found.push({ x: pts[i].x, y: pts[i].y, v: val, w: labelW(val) })
     }
     for (var i = 1; i < pts.length - 1; i++)
       if ((v[i] || 0) > (v[i - 1] || 0) && (v[i] || 0) >= (v[i + 1] || 0)) keep(i)
@@ -54,11 +61,21 @@ Shape {
     if ((v[last] || 0) > (v[last - 1] || 0)) keep(last)
     found.sort(function(a, b) { return a.y - b.y })
     var kept = []
+    var others = avoid || []
+    // Where the label ends up: pushed down inside the chart near its top.
+    var top = calloutSize + 2 + labelTop
+    function ly(p) { return Math.max(p.y, top) }
+    // Where a label's centre ends up: kept inside the chart's width.
+    function lx(p) { var w = p.w || 30; return Math.max(w / 2, Math.min(width - w / 2, p.x)) }
+    function apart(p, q) { return Math.abs(lx(p) - lx(q)) >= ((p.w || 30) + (q.w || 30)) / 2 }
     for (var k = 0; k < found.length && kept.length < peaks; k++) {
       var c = found[k], clash = false
+      for (var a = 0; a < others.length; a++)
+        if (!apart(c, others[a]) && Math.abs(ly(c) - ly(others[a])) < calloutSize + 3) { clash = true; break }
+      if (clash) continue
       for (var j = 0; j < kept.length; j++) {
         var o = kept[j]
-        if (Math.abs(c.x - o.x) < 26 && Math.abs(c.y - o.y) < calloutSize + 3) { clash = true; break }
+        if (!apart(c, o) && Math.abs(ly(c) - ly(o)) < calloutSize + 3) { clash = true; break }
         if (Math.abs(c.v - o.v) <= o.v * 0.12) { clash = true; break }
       }
       if (!clash) kept.push(c)
@@ -93,7 +110,8 @@ Shape {
       style: Text.Outline
       styleColor: Qt.rgba(0, 0, 0, 0.55)
       x: Math.max(0, Math.min(spark.width - width, modelData.x - width / 2))
-      y: Math.max(-height + 2, modelData.y - height - 1)
+      // Inside the chart: above it sits a heading or a legend.
+      y: Math.max(spark.labelTop, modelData.y - height - 1)
     }
   }
 }

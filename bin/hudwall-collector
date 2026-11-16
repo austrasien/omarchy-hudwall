@@ -2,9 +2,11 @@
 """System readings for the HUD wallpaper, one JSON object per line.
 
 Runs only while the HUD is seen (the plugin starts and stops it). Every
-second it prints the sections that changed: cpu, mem, net and battery every
-second, processes every 3 s, the NPU every 2 s, network peers every 5 s,
-Tailscale and the Wi-Fi every 30 s, the battery's day every 5 min.
+second it prints the sections that changed: cpu, mem and net every second,
+the NPU every 2 s, processes every 3 s, the battery and network peers every
+5 s, Tailscale and the Wi-Fi every 30 s, the battery's day every 5 min. The
+NPU's 24 h history is read again from the journal only when the NPU served
+requests since the last read (or every 10 min, as the hours roll).
 
 Stdlib only. Nothing goes on the network but loopback calls to Lemonade
 and pings to the Tailscale peers named in the config.
@@ -576,16 +578,22 @@ def main():
     cfg = config()
     tick = 0
     bat_name = None
+    npu_served, npu_dirty, npu_read = None, False, 0.0
     while True:
         now = time.time()
-        out = {"t": round(now, 3), "cpu": cpu.sample(), "gpu": gpu(), "mem": memory(), "net": net.sample(now), "bat": battery()}
-        bat_name = out["bat"].get("name") or bat_name
+        out = {"t": round(now, 3), "cpu": cpu.sample(), "gpu": gpu(), "mem": memory(), "net": net.sample(now)}
+        if tick % 5 == 0:
+            out["bat"] = battery()
+            bat_name = out["bat"].get("name") or bat_name
         if tick % 3 == 0:
             p = procs.sample(now)
             if p is not None:
                 out["procs"] = p
         if tick % 2 == 0:
             out["npu"] = npu()
+            served = out["npu"].get("requests")
+            if served is not None and served != npu_served:
+                npu_dirty, npu_served = True, served
         if tick % 5 == 0:
             p = peers.sample(now)
             if p is not None:
@@ -596,8 +604,9 @@ def main():
             out["host"] = {"name": os.uname().nodename, "kernel": os.uname().release,
                            "uptime": int(float(up[0])) if up else 0}
             out["tail"] = tail.sample(cfg)
-        if tick % 60 == 0:
+        if tick % 600 == 0 or (npu_dirty and now - npu_read >= 60):
             d = npu_day()
+            npu_read, npu_dirty = now, False
             if d is not None:
                 out["npuDay"] = d
         if tick % 300 == 0 and bat_name:

@@ -38,14 +38,17 @@ Item {
   Rectangle { x: panel.width; y: panel.height - 9; width: 1; height: 10; color: panel.pal.acc; opacity: 0.7 }
 
   HText {
+    id: labelText
     visible: panel.label.length > 0
     x: panel.pad; y: panel.pad - 2
+    // Steps aside for the hints when both would not fit.
+    opacity: hover.hovered && hints.opacity > 0 && contentWidth + hints.implicitWidth + 12 > panel.width - 2 * panel.pad ? 0 : 0.9
+    Behavior on opacity { NumberAnimation { duration: Style.duration(160) } }
     width: panel.width / 2
     text: panel.label.toUpperCase()
     color: panel.pal.acc
     font.pixelSize: 9
     font.letterSpacing: 2
-    opacity: 0.9
   }
   HText {
     visible: panel.note.length > 0
@@ -57,6 +60,24 @@ Item {
     color: panel.pal.dim
     font.pixelSize: 9
     font.letterSpacing: 2
+    opacity: hover.hovered && hints.text.length ? 0 : 1
+    Behavior on opacity { NumberAnimation { duration: Style.duration(160) } }
+  }
+  // On hover, in place of the note: a right-click explains the panel, a
+  // click opens where it leads.
+  HText {
+    id: hints
+    anchors.right: parent.right; anchors.rightMargin: panel.pad
+    y: panel.pad - 2
+    horizontalAlignment: Text.AlignRight
+    text: (panel.tip.length ? "? RIGHT-CLICK" : "")
+      + (panel.tip.length && panel.clickable ? "  ·  " : "")
+      + (panel.clickable ? "↗ " + (panel.actionLabel || panel.tab).toUpperCase() : "")
+    color: panel.pal.acc
+    font.pixelSize: 9
+    font.letterSpacing: 1.5
+    opacity: hover.hovered && text.length ? 0.85 : 0
+    Behavior on opacity { NumberAnimation { duration: Style.duration(160) } }
   }
 
   HoverHandler { id: hover }
@@ -77,18 +98,6 @@ Item {
     y: panel.bodyTop
     width: panel.width - 2 * panel.pad
     height: panel.height - panel.bodyTop - panel.pad
-  }
-
-  HText {
-    visible: panel.clickable
-    opacity: hover.hovered ? 0.85 : 0
-    Behavior on opacity { NumberAnimation { duration: Style.duration(160) } }
-    anchors.right: parent.right; anchors.rightMargin: 8
-    anchors.bottom: parent.bottom; anchors.bottomMargin: 4
-    text: "↗ " + (panel.actionLabel || panel.tab).toUpperCase()
-    color: panel.pal.acc
-    font.pixelSize: 8
-    font.letterSpacing: 1.5
   }
 
   HoverTip {

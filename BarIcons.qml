@@ -101,8 +101,9 @@ HPanel {
     { glyph: g(0xF0EF2), value: "zones", target: "omarchy.elsewhen" },
     { glyph: muted ? g(0xF075F) : g(0xF057E), value: muted ? "mute" : Math.round(volume * 100) + "%", target: "omarchy.audio", on: !muted },
     { glyph: btOn ? g(0xF00AF) : g(0xF00B2), value: btOn ? "on" : "off", target: "omarchy.bluetooth", on: btOn },
-    { glyph: g(0xF0582), value: sys.tail.up ? "up" : "down", target: "omarchy.tailscale", on: !!sys.tail.up },
-    { glyph: g(0xF0582), value: "vpn", target: "io.github.guiestrela.nordvpn" },
+    { glyph: "", logo: "tailscale", value: sys.tail.up ? "up" : "down", target: "omarchy.tailscale", on: !!sys.tail.up },
+    // `open`: the plugin's `toggle` connects or disconnects the VPN.
+    { glyph: g(0xF0582), value: "vpn", target: "io.github.guiestrela.nordvpn", fn: "open" },
     { glyph: g(0xF06A9), value: "agents", target: "omarchy.agents" },
     { glyph: g(0xF0238), value: "focus", target: "austraz.prometheus", fn: "openTab", args: ["session"] },
     { glyph: g(0xF0379), value: "screens", target: "im0001gt.screens" },
@@ -163,6 +164,23 @@ HPanel {
           color: cell.modelData.on === false ? bar.pal.mut : bar.pal.fg
           font.pixelSize: Math.round(cell.modelData.text ? Math.min(12 * bar.f, bar.cellW / 3.4) : 14 * bar.f)
           font.weight: cell.modelData.bold || cell.modelData.text ? Font.DemiBold : Font.Normal
+        }
+        // Tailscale's mark: nine dots, the "T" lit.
+        Grid {
+          visible: cell.modelData.logo === "tailscale"
+          anchors.horizontalCenter: parent.horizontalCenter
+          readonly property real d: 3.6 * bar.f
+          y: (bar.cellH - 26 * bar.f) / 2 + bar.f + (14 * bar.f * 1.32 - (3 * d + 2 * spacing)) / 2
+          columns: 3; spacing: 1.4 * bar.f
+          Repeater {
+            model: [0, 0, 0, 1, 1, 1, 0, 1, 0]
+            Rectangle {
+              required property var modelData
+              width: parent.d; height: parent.d; radius: parent.d / 2
+              color: cell.modelData.on === false ? bar.pal.mut : bar.pal.fg
+              opacity: modelData ? 1 : 0.35
+            }
+          }
         }
         HText {
           anchors.horizontalCenter: parent.horizontalCenter

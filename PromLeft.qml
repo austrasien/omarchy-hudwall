@@ -193,7 +193,7 @@ Item {
           HText {
             x: index === 0 ? -width - 3 : 3
             y: race.axisY + 9
-            text: modelData.t; color: modelData.c; font.pixelSize: 8
+            text: modelData.t; color: modelData.c; font.pixelSize: 9
           }
         }
       }
@@ -289,7 +289,7 @@ Item {
             anchors.bottom: parent.bottom; anchors.bottomMargin: -2
             text: "SMTWTFS".charAt(new Date(xday.modelData.date + "T12:00:00").getDay())
             color: xday.modelData.date === (col.p ? col.p.todayDate : "") ? col.pal.fg : col.pal.mut
-            font.pixelSize: 7
+            font.pixelSize: 9
           }
         }
       }
@@ -343,7 +343,7 @@ Item {
             HText {
               anchors.right: parent.right
               text: seasonPanel.s && seasonPanel.s.grade ? "GRADE" : "GRADE SO FAR"
-              color: col.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2
+              color: col.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.2
             }
             HText {
               anchors.right: parent.right
@@ -419,7 +419,7 @@ Item {
       spacing: 5
 
       // Quests: the open ones, or a way to start one.
-      HText { text: "QUESTS"; color: col.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.5 }
+      HText { text: "QUESTS"; color: col.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.5 }
       Item {
         visible: questPanel.open.length === 0
         width: parent.width; height: 18
@@ -479,7 +479,7 @@ Item {
       }
 
       // Achievements: the tiers closest to unlocking, as many as fit.
-      HText { visible: questPanel.open.length < 3; text: "NEXT ACHIEVEMENTS"; color: col.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.5 }
+      HText { visible: questPanel.open.length < 3; text: "NEXT ACHIEVEMENTS"; color: col.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.5 }
       Repeater {
         // As many as fit above the latest unlocks.
         model: questPanel.nextTiers.slice(0, questPanel.open.length === 0 ? 2 : Math.max(0, 3 - questPanel.open.length))
@@ -501,7 +501,7 @@ Item {
             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
             width: 64; horizontalAlignment: Text.AlignRight
             text: questPanel.short(modelData.value) + " / " + questPanel.short(modelData.threshold)
-            color: col.pal.dim; font.pixelSize: 8
+            color: col.pal.dim; font.pixelSize: 9
           }
         }
       }
@@ -512,7 +512,7 @@ Item {
       anchors.bottom: parent.bottom
       width: parent.width
       spacing: 4
-      HText { text: "LATEST UNLOCKED"; color: col.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.5 }
+      HText { text: "LATEST UNLOCKED"; color: col.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.5 }
       // One line: the capsules that fit.
       Flow {
         width: parent.width; height: 16
@@ -529,7 +529,7 @@ Item {
               id: capText
               anchors.centerIn: parent
               text: (parent.modelData.rarity === "legendary" ? "✦ " : parent.modelData.rarity === "epic" ? "★ " : parent.modelData.rarity === "rare" ? "◆ " : "") + parent.modelData.name
-              color: col.rarityColor(parent.modelData.rarity); font.pixelSize: 8
+              color: col.rarityColor(parent.modelData.rarity); font.pixelSize: 9
             }
           }
         }

@@ -161,13 +161,13 @@ Item {
         Spark {
           visible: gpuLegend.on("load")
           anchors.fill: parent
-          values: col.sys.gpuHist; color: col.pal.series(0); peaks: 3
+          id: gpuLoad; values: col.sys.gpuHist; color: col.pal.series(0); peaks: 3
           format: function(v) { return col.pct(v) }
         }
         Spark {
           visible: gpuLegend.on("watts")
           anchors.fill: parent; fill: false; lineWidth: 1
-          values: col.sys.gpuWattHist; max: parent.wMax; color: col.pal.series(2); peaks: 2
+          avoid: gpuLoad.visible ? gpuLoad.callouts : []; values: col.sys.gpuWattHist; max: parent.wMax; color: col.pal.series(2); peaks: 2
           format: function(v) { return v.toFixed(1) + " W" }
         }
       }
@@ -183,7 +183,7 @@ Item {
           Row {
             required property var modelData
             spacing: 6
-            HText { width: 30; text: modelData.n; color: col.pal.dim; font.pixelSize: 8; font.letterSpacing: 1 }
+            HText { width: 30; text: modelData.n; color: col.pal.dim; font.pixelSize: 9; font.letterSpacing: 1 }
             Item {
               width: parent.parent.width - 30 - 6 - 6 - 74; height: 5
               anchors.verticalCenter: parent.verticalCenter
@@ -193,7 +193,7 @@ Item {
                 color: col.pal.series(3)
               }
             }
-            HText { width: 74; horizontalAlignment: Text.AlignRight; text: col.sys.bytes(modelData.u) + " / " + col.sys.bytes(modelData.t); color: col.pal.dim; font.pixelSize: 8 }
+            HText { width: 74; horizontalAlignment: Text.AlignRight; text: col.sys.bytes(modelData.u) + " / " + col.sys.bytes(modelData.t); color: col.pal.dim; font.pixelSize: 9 }
           }
         }
       }
@@ -272,19 +272,19 @@ Item {
           Spark {
             visible: memLegend.on("cache")
             anchors.fill: parent; fill: false; lineWidth: 1
-            values: col.sys.memCacheHist; max: parent.total; color: col.pal.series(1); peaks: 1
+            id: memCache; values: col.sys.memCacheHist; max: parent.total; color: col.pal.series(1); peaks: 1
             format: function(v) { return parent.gb(v) }
           }
           Spark {
             visible: memLegend.on("zram")
             anchors.fill: parent; fill: false; lineWidth: 1
-            values: col.sys.memZramHist; max: parent.total; color: col.pal.series(2); peaks: 1
+            id: memZram; avoid: memCache.visible ? memCache.callouts : []; values: col.sys.memZramHist; max: parent.total; color: col.pal.series(2); peaks: 1
             format: function(v) { return parent.gb(v) }
           }
           Spark {
             visible: memLegend.on("used")
             anchors.fill: parent
-            values: col.sys.memUsedHist; max: parent.total; color: col.pal.series(0); peaks: 3
+            avoid: (memCache.visible ? memCache.callouts : []).concat(memZram.visible ? memZram.callouts : []); values: col.sys.memUsedHist; max: parent.total; color: col.pal.series(0); peaks: 3
             format: function(v) { return parent.gb(v) }
           }
         }
@@ -339,13 +339,16 @@ Item {
       y: 24
       pal: col.pal
       width: parent.width
-      items: npuPanel.clients.map(function(c) { return { key: c.key, name: c.name, color: c.color } })
+      // Short names (the client's first word) to keep to one line.
+      items: npuPanel.clients.map(function(c) { return { key: c.key, name: c.name.split("-")[0], color: c.color } })
     }
     Item {
       id: bars
       anchors.bottom: parent.bottom
-      width: parent.width; height: 34
+      // Below the legend, with room for the peak labels.
+      width: parent.width; height: Math.max(20, parent.height - (npuLegend.y + npuLegend.height + 4))
       readonly property real bw: width / 24
+      readonly property real head: 12      // kept free over the bars for the peak labels
       Repeater {
         model: npuPanel.day ? npuPanel.day.hours : []
         Item {
@@ -362,7 +365,7 @@ Item {
               Rectangle {
                 required property var modelData
                 width: hourBar.width
-                height: npuLegend.on(modelData.key) ? bars.height * (hourBar.modelData[modelData.key] || 0) / npuPanel.topS : 0
+                height: npuLegend.on(modelData.key) ? (bars.height - bars.head) * (hourBar.modelData[modelData.key] || 0) / npuPanel.topS : 0
                 color: modelData.color
               }
             }
@@ -370,7 +373,8 @@ Item {
         }
       }
       Spark {
-        anchors.fill: parent
+        y: bars.head; width: parent.width; height: parent.height - bars.head
+        labelTop: -bars.head
         centered: true; fill: false; lineWidth: 0
         values: npuPanel.totals; max: npuPanel.topS; color: col.pal.fg
         format: function(v) { return Math.round(v / 60) + "m" }

@@ -131,7 +131,7 @@ Item {
           id: chipText
           anchors.centerIn: parent
           text: "▤ TASKS " + block.openTasks.length + " · 🔒"
-          color: block.pal.dim; font.pixelSize: 8; font.letterSpacing: 1
+          color: block.pal.dim; font.pixelSize: 9; font.letterSpacing: 1
         }
         // A click opens the task list in Prometheus' panel. The zone runs
         // past the chip so its whole drawing answers the pointer.

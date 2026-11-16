@@ -180,7 +180,7 @@ Item {
     visible: !center.sys.peers.geo
     x: center.gx - width / 2; y: center.gy + 150 * center.gs
     text: "no GeoIP database · bin/hudwall-fetch-data"
-    color: center.pal.mut; font.pixelSize: 8
+    color: center.pal.mut; font.pixelSize: 9
   }
 
   // ------------------------------------------------------------ toasts
@@ -237,7 +237,7 @@ Item {
     HText {
       width: parent.width; horizontalAlignment: Text.AlignRight
       text: "GOAL · " + (parent.g && parent.g.goal ? ({ day: "DAY", week: "WEEK", month: "MONTH" })[parent.g.goal.period] || "" : "")
-      color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2
+      color: center.pal.acc; font.pixelSize: 9; font.letterSpacing: 2
     }
     HText {
       width: parent.width; horizontalAlignment: Text.AlignRight
@@ -251,7 +251,7 @@ Item {
   Column {
     x: 0; y: center.sessionY - 112; width: 140
     spacing: 2
-    HText { text: "TODAY BY APP"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2 }
+    HText { text: "TODAY BY APP"; color: center.pal.acc; font.pixelSize: 9; font.letterSpacing: 2 }
     Repeater {
       model: center.apps.slice(0, 5)
       Row {
@@ -268,7 +268,7 @@ Item {
   // Today against yesterday at the same hour (time in session, time at the
   // desk), the app used most today, and the busiest day of this week.
   Column {
-    x: center.width - 190; y: center.sessionY - 112; width: 190
+    x: center.width - 215; y: center.sessionY - 112; width: 215
     spacing: 2
     readonly property var ins: center.prom.insights
     function line(key) {
@@ -296,7 +296,7 @@ Item {
         }
       }
     }
-    HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: "TODAY VS YESTERDAY, SAME HOUR"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 1.5 }
+    HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: "TODAY VS YESTERDAY, SAME HOUR"; color: center.pal.acc; font.pixelSize: 9; font.letterSpacing: 1.5 }
     Pair {
       readonly property var l: parent.line("focusSeconds")
       k: "in session"; v: l.v; d: l.d; up: l.d.charAt(0) !== "−"
@@ -318,7 +318,7 @@ Item {
     }
   }
   MouseArea {
-    x: center.width - 190; y: center.sessionY - 112; width: 190; height: 70
+    x: center.width - 215; y: center.sessionY - 112; width: 215; height: 70
     cursorShape: Qt.PointingHandCursor
     onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", "stats"])
   }
@@ -398,7 +398,7 @@ Item {
         id: qcol
         anchors.centerIn: parent
         spacing: 6
-        HText { anchors.horizontalCenter: parent.horizontalCenter; text: ask.q ? ask.q.k : ""; color: center.pal.cyan; font.pixelSize: 8; font.letterSpacing: 2 }
+        HText { anchors.horizontalCenter: parent.horizontalCenter; text: ask.q ? ask.q.k : ""; color: center.pal.cyan; font.pixelSize: 9; font.letterSpacing: 2 }
         HText { anchors.horizontalCenter: parent.horizontalCenter; text: ask.q ? ask.q.q : ""; color: center.pal.fg }
         Row {
           anchors.horizontalCenter: parent.horizontalCenter

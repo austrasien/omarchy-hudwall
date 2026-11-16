@@ -67,7 +67,7 @@ Item {
     HText {
       visible: g.caption.length > 0
       anchors.horizontalCenter: parent.horizontalCenter
-      text: g.caption; color: g.pal.dim; font.pixelSize: 7; font.letterSpacing: 1
+      text: g.caption; color: g.pal.dim; font.pixelSize: 9; font.letterSpacing: 1
     }
   }
 }

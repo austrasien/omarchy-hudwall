@@ -92,50 +92,50 @@ Item {
       ]
     }
     // Focus.
-    HText { y: 16; text: "FOCUS · " + row.hm((ghost.today.length ? ghost.today[ghost.today.length - 1] : 0) * 3600); color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2 }
+    HText { y: 16; text: "FOCUS · " + row.hm((ghost.today.length ? ghost.today[ghost.today.length - 1] : 0) * 3600); color: row.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.2 }
     Item {
       y: 28; width: parent.width; height: 40
       Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: row.pal.alpha(row.pal.fg, 0.08) }
       Spark {
         visible: ghostLegend.on("best")
         anchors.fill: parent; fill: false
-        values: ghost.best; max: ghost.topV; color: row.pal.series(1); lineWidth: 1; peaks: 1
+        id: gBest; values: ghost.best; max: ghost.topV; color: row.pal.series(1); lineWidth: 1; peaks: 1
         format: function(v) { return row.hm(v * 3600) }
       }
       Spark {
         visible: ghostLegend.on("yest")
         width: parent.width * (ghost.yest.length - 1) / 72; height: parent.height; fill: false
-        values: ghost.yest; max: ghost.topV; color: row.pal.series(2); lineWidth: 1; peaks: 1
+        id: gYest; avoid: gBest.visible ? gBest.callouts : []; values: ghost.yest; max: ghost.topV; color: row.pal.series(2); lineWidth: 1; peaks: 1
         format: function(v) { return row.hm(v * 3600) }
       }
       Spark {
         visible: ghostLegend.on("today")
         width: parent.width * Math.max(1, ghost.today.length - 1) / 72; height: parent.height
-        values: ghost.today; max: ghost.topV; color: row.pal.series(0); lineWidth: 1.6; peaks: 3
+        avoid: (gBest.visible ? gBest.callouts : []).concat(gYest.visible ? gYest.callouts : []); values: ghost.today; max: ghost.topV; color: row.pal.series(0); lineWidth: 1.6; peaks: 3
         format: function(v) { return row.hm(v * 3600) }
       }
     }
     // Agents.
-    HText { y: 76; text: "AGENTS · " + row.tokens(ghost.tToday.length ? ghost.tToday[ghost.tToday.length - 1] : 0) + " tokens"; color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2 }
+    HText { y: 76; text: "AGENTS · " + row.tokens(ghost.tToday.length ? ghost.tToday[ghost.tToday.length - 1] : 0) + " tokens"; color: row.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.2 }
     Item {
       y: 88; width: parent.width; height: parent.height - 88
       Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: row.pal.alpha(row.pal.fg, 0.08) }
       Spark {
         visible: ghostLegend.on("best")
         anchors.fill: parent; fill: false
-        values: ghost.tBest; max: ghost.tTop; color: row.pal.series(1); lineWidth: 1; peaks: 1
+        id: tokBest; values: ghost.tBest; max: ghost.tTop; color: row.pal.series(1); lineWidth: 1; peaks: 1
         format: function(v) { return row.tokens(v) }
       }
       Spark {
         visible: ghostLegend.on("yest")
         width: parent.width * Math.max(1, ghost.tYest.length - 1) / 24; height: parent.height; fill: false
-        values: ghost.tYest; max: ghost.tTop; color: row.pal.series(2); lineWidth: 1; peaks: 1
+        id: tokYest; avoid: tokBest.visible ? tokBest.callouts : []; values: ghost.tYest; max: ghost.tTop; color: row.pal.series(2); lineWidth: 1; peaks: 1
         format: function(v) { return row.tokens(v) }
       }
       Spark {
         visible: ghostLegend.on("today")
         width: parent.width * Math.max(1, ghost.tToday.length - 1) / 24; height: parent.height
-        values: ghost.tToday; max: ghost.tTop; color: row.pal.series(0); lineWidth: 1.6; peaks: 3
+        avoid: (tokBest.visible ? tokBest.callouts : []).concat(tokYest.visible ? tokYest.callouts : []); values: ghost.tToday; max: ghost.tTop; color: row.pal.series(0); lineWidth: 1.6; peaks: 3
         format: function(v) { return row.tokens(v) }
       }
     }
@@ -217,13 +217,14 @@ Item {
       pal: row.pal
       width: parent.width
       spacing: 6
-      size: 7
+      size: 9
       items: quality.groups.map(function(g) { return { key: g.key, name: g.name.length > 12 ? g.name.slice(0, 11) + "…" : g.name, color: g.color } })
     }
     Item {
       id: act
       anchors.bottom: parent.bottom
-      width: parent.width; height: parent.height - 58
+      // Below the legend (one or two lines), with room for the peak labels.
+      width: parent.width; height: parent.height - (actLegend.y + actLegend.height + 4)
       readonly property real bw: width / 24
       Rectangle { anchors.bottom: parent.bottom; anchors.bottomMargin: 8; width: parent.width; height: 1; color: row.pal.alpha(row.pal.fg, 0.1) }
       Repeater {
@@ -241,7 +242,7 @@ Item {
               Rectangle {
                 required property var modelData
                 width: hr.width
-                height: actLegend.on(modelData.key) ? hr.height * quality.groupSecs(hr.modelData, modelData.key) / 3600 : 0
+                height: actLegend.on(modelData.key) ? (hr.height - 12) * quality.groupSecs(hr.modelData, modelData.key) / 3600 : 0
                 color: modelData.color
               }
             }
@@ -249,7 +250,9 @@ Item {
         }
       }
       Spark {
-        width: parent.width * quality.perHour.length / 24; height: parent.height - 8
+        // 12 px kept free over the bars for the peak labels.
+        y: 12; width: parent.width * quality.perHour.length / 24; height: parent.height - 8 - 12
+        labelTop: -12
         centered: true; fill: false; lineWidth: 0
         values: quality.totals; max: 3600; color: row.pal.fg
         format: function(v) { return Math.round(v / 60) + "m" }
@@ -264,7 +267,7 @@ Item {
             var d = new Date((quality.tl ? quality.tl.fromMs : 0) + modelData * 3600000)
             return d.getHours() + "h"
           }
-          color: row.pal.mut; font.pixelSize: 7
+          color: row.pal.mut; font.pixelSize: 9
         }
       }
     }
@@ -345,7 +348,7 @@ Item {
     }
     HiCanvas {
       id: curve
-      y: 32; width: parent.width; height: 50
+      y: 32; width: parent.width; height: 40
       pixelScale: row.pixelScale
       property var cdata: coffee.cd
       onCdataChanged: requestPaint()
@@ -397,7 +400,7 @@ Item {
         var v = Math.round((cmp[k].with / cmp[k].without - 1) * 100)
         return (v >= 0 ? "+" : "") + v + "%"
       }
-      HText { text: "WITH COFFEE · " + (effect.st ? effect.st.daysCompared : "–") + " DAYS"; color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2 }
+      HText { text: "WITH COFFEE · " + (effect.st ? effect.st.daysCompared : "–") + " DAYS"; color: row.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.2 }
       Flow {
         width: parent.width
         spacing: 8
@@ -411,14 +414,14 @@ Item {
             required property var modelData
             spacing: 3
             HText { text: effect.pct(modelData.k); color: modelData.c; font.pixelSize: 10; font.weight: Font.DemiBold }
-            HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 1; text: modelData.n; color: row.pal.dim; font.pixelSize: 8 }
+            HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 1; text: modelData.n; color: row.pal.dim; font.pixelSize: 9 }
           }
         }
       }
       HText {
         visible: !!(effect.st && effect.st.tokensPerCup)
         text: effect.st && effect.st.tokensPerCup ? "≈ " + row.tokens(effect.st.tokensPerCup / 1e6) + " tokens per cup" : ""
-        color: row.pal.dim; font.pixelSize: 8
+        color: row.pal.dim; font.pixelSize: 9
       }
     }
   }
@@ -444,19 +447,21 @@ Item {
         { key: "up", name: "↑", color: row.pal.series(1), value: row.sys.bits(row.sys.net.up) }
       ]
     }
+    // The rates fill the room between the legend and Tailscale.
     Item {
-      y: 24; width: parent.width; height: 58
+      y: 24; width: parent.width; height: tailCol.y - 6 - y
       readonly property real topV: Math.max(50000, Math.max.apply(null,
         (netLegend.on("down") ? row.sys.downHist : []).concat(netLegend.on("up") ? row.sys.upHist : [], [1])) * 1.1)
-      Spark { visible: netLegend.on("down"); anchors.fill: parent; values: row.sys.downHist; max: parent.topV; color: row.pal.series(0); peaks: 3; format: function(v) { return row.sys.bits(v) } }
-      Spark { visible: netLegend.on("up"); anchors.fill: parent; values: row.sys.upHist; max: parent.topV; color: row.pal.series(1); peaks: 2; fill: false; lineWidth: 1; format: function(v) { return row.sys.bits(v) } }
+      Spark { id: netDown; visible: netLegend.on("down"); anchors.fill: parent; values: row.sys.downHist; max: parent.topV; color: row.pal.series(0); peaks: 3; format: function(v) { return row.sys.bits(v) } }
+      Spark { visible: netLegend.on("up"); anchors.fill: parent; avoid: netDown.visible ? netDown.callouts : []; values: row.sys.upHist; max: parent.topV; color: row.pal.series(1); peaks: 2; fill: false; lineWidth: 1; format: function(v) { return row.sys.bits(v) } }
     }
     Column {
-      y: 88; width: parent.width
+      id: tailCol
+      anchors.bottom: parent.bottom; width: parent.width
       spacing: 2
       HText {
         text: "TAILSCALE " + (row.sys.tail.up ? "· relay " + (row.sys.tail.relay || "–") : "· stopped")
-        color: row.pal.mut; font.pixelSize: 8; font.letterSpacing: 1
+        color: row.pal.mut; font.pixelSize: 9; font.letterSpacing: 1
       }
       Flow {
         width: parent.width
@@ -511,8 +516,8 @@ Item {
         }
         return out
       }
-      Spark { visible: battLegend.on("watts"); anchors.fill: parent; values: parent.series(row.sys.batDay.rate, 40); color: row.pal.series(1); peaks: 3; fill: false; lineWidth: 1; format: function(v) { return (v * 40).toFixed(1) + " W" } }
-      Spark { visible: battLegend.on("charge"); anchors.fill: parent; values: parent.series(row.sys.batDay.charge, 100); color: row.pal.series(0); peaks: 2; format: function(v) { return Math.round(v * 100) + "%" } }
+      Spark { id: battWatts; visible: battLegend.on("watts"); anchors.fill: parent; values: parent.series(row.sys.batDay.rate, 40); color: row.pal.series(1); peaks: 3; fill: false; lineWidth: 1; format: function(v) { return (v * 40).toFixed(1) + " W" } }
+      Spark { visible: battLegend.on("charge"); anchors.fill: parent; avoid: battWatts.visible ? battWatts.callouts : []; values: parent.series(row.sys.batDay.charge, 100); color: row.pal.series(0); peaks: 2; format: function(v) { return Math.round(v * 100) + "%" } }
     }
     Legend {
       id: battLegend
@@ -557,16 +562,16 @@ Item {
       pal: weekPanel.pal
       width: grid.leftW
       spacing: 6
-      size: 7
+      size: 9
       items: [
-        { key: "tracked", name: "at the desk", color: row.pal.series(3) },
+        { key: "tracked", name: "at desk", color: row.pal.series(3) },
         { key: "focus", name: "in session", color: row.pal.series(0) }
       ]
     }
     HText {
       x: grid.gridX
-      text: "SESSIONS BY HOUR · LAST 8 WEEKS"
-      color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1
+      text: "8 WEEKS"
+      color: row.pal.mut; font.pixelSize: 9; font.letterSpacing: 1
     }
     // Seven rows shared by the days (left) and the weekday x hour grid of
     // the last weeks (right), so both read along the same line.
@@ -591,7 +596,7 @@ Item {
             width: 10; anchors.verticalCenter: parent.verticalCenter
             text: "SMTWTFS".charAt(new Date(dayRow.modelData.date + "T12:00:00").getDay())
             color: dayRow.today ? row.pal.fg : row.pal.mut
-            font.pixelSize: 8; font.weight: dayRow.today ? Font.DemiBold : Font.Normal
+            font.pixelSize: 9; font.weight: dayRow.today ? Font.DemiBold : Font.Normal
           }
           Item {
             x: 12; width: parent.width - 12 - 56; height: Math.max(3, grid.rowH - 5)
@@ -617,13 +622,13 @@ Item {
               width: 28; horizontalAlignment: Text.AlignRight
               visible: weekLegend.on("tracked")
               text: weekPanel.hm2(dayRow.modelData.trackedSeconds)
-              color: row.pal.series(3); font.pixelSize: 8
+              color: row.pal.series(3); font.pixelSize: 9
             }
             HText {
               width: 26; horizontalAlignment: Text.AlignRight
               visible: weekLegend.on("focus")
               text: weekPanel.hm2(dayRow.modelData.focusSeconds)
-              color: row.pal.series(0); font.pixelSize: 8
+              color: row.pal.series(0); font.pixelSize: 9
             }
           }
         }
@@ -645,9 +650,8 @@ Item {
     }
     // The grid's scale, bottom right.
     Row {
-      anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.bottomMargin: -2
+      anchors.right: parent.right; y: 1
       spacing: 2
-      HText { text: "0"; color: row.pal.mut; font.pixelSize: 7 }
       Repeater {
         model: 5
         Rectangle {
@@ -658,7 +662,7 @@ Item {
           opacity: index === 0 ? 1 : 0.2 + 0.2 * index
         }
       }
-      HText { text: Math.round(weekPanel.heatMax / 60) + " h"; color: row.pal.mut; font.pixelSize: 7 }
+      HText { text: Math.round(weekPanel.heatMax / 60) + " h"; color: row.pal.mut; font.pixelSize: 9 }
     }
     // Hours under the grid.
     Repeater {
@@ -667,7 +671,7 @@ Item {
         required property var modelData
         x: grid.gridX + modelData * grid.cellW
         anchors.bottom: parent.bottom; anchors.bottomMargin: -2
-        text: modelData + "h"; color: row.pal.mut; font.pixelSize: 7
+        text: modelData + "h"; color: row.pal.mut; font.pixelSize: 9
       }
     }
   }

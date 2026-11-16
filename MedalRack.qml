@@ -110,7 +110,7 @@ Item {
             anchors.right: parent.right; anchors.rightMargin: 2
             anchors.bottom: parent.bottom; anchors.bottomMargin: -1
             text: rib.modelData.count
-            color: "white"; font.pixelSize: 8; font.weight: Font.Bold
+            color: "white"; font.pixelSize: 9; font.weight: Font.Bold
             style: Text.Outline; styleColor: "black"
           }
           // A MouseArea, not a HoverHandler: on the HUD's layer surface only
@@ -133,13 +133,13 @@ Item {
     spacing: 8
     HText {
       text: rack.all.length ? rack.all.length + " DECORATIONS · " + rack.attributions + " AWARDS" : "NO DECORATIONS"
-      color: rack.pal.mut; font.pixelSize: 8; font.letterSpacing: 1.5
+      color: rack.pal.mut; font.pixelSize: 9; font.letterSpacing: 1.5
     }
     // Share: Prometheus builds its card (the rack among it) and offers to save it.
     HText {
       text: String.fromCodePoint(0xF0497) + " SHARE"
       color: shareArea.containsMouse ? rack.pal.acc : rack.pal.dim
-      font.pixelSize: 8; font.letterSpacing: 1.5
+      font.pixelSize: 9; font.letterSpacing: 1.5
       MouseArea {
         id: shareArea
         anchors.fill: parent; anchors.margins: -4
