@@ -1,7 +1,8 @@
 import QtQuick
 import Quickshell
 
-// The medal rack, as on a uniform: one ribbon per medal won, four to a row,
+// The medal rack, as on a uniform: one ribbon per medal won, rows as wide as
+// the rack,
 // the short row on top and centred; season medals lead. A ribbon carries 1
 // to 3 dots (day, week, month), edge stripes for the harder ones, and the
 // number of times it was won.
@@ -11,10 +12,9 @@ Item {
   required property var pal
   property var medals: []
   property var seasonMedals: []
-  readonly property int perRow: 4
-  implicitWidth: col.implicitWidth
+  // As many ribbons to a row as the width given holds.
+  readonly property int perRow: Math.max(1, Math.floor((width + 3) / 57))
   implicitHeight: col.implicitHeight
-  width: implicitWidth
   height: implicitHeight
 
   // The daemon pushes a fresh array every two seconds: rebuild the ribbons
@@ -39,6 +39,7 @@ Item {
 
   Column {
   id: col
+  width: rack.width
   spacing: 3
   Repeater {
     model: rack.rows

@@ -25,7 +25,7 @@ Item {
 
   // Geometry: a compact header, the session at the bottom, and the globe
   // with its rings as big as the space between allows.
-  readonly property real headerH: prom.geekDate ? 74 : 62
+  readonly property real headerH: header.height + 6
   readonly property real sessionY: height - 64
   readonly property real areaTop: headerH + 4
   readonly property real areaH: sessionY - 4 - areaTop
@@ -78,12 +78,9 @@ Item {
       text: center.prom.geekDate ? center.prom.geekDate[2] + " « " + center.prom.geekDate[3] + " »" : ""
       color: center.pal.cyan; font.pixelSize: 9
     }
-    Row {
-      anchors.horizontalCenter: parent.horizontalCenter
-      spacing: 22
       Column {
         id: xpBlock
-        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width
         spacing: 4
         readonly property var pr: center.p ? center.p.profile : null
         HText {
@@ -92,7 +89,7 @@ Item {
         }
         HBar {
           pal: center.pal
-          width: 200
+          width: parent.width
           value: xpBlock.pr && xpBlock.pr.levelCost ? xpBlock.pr.levelXp / xpBlock.pr.levelCost : 0
         }
         Row {
@@ -116,12 +113,11 @@ Item {
         }
       }
       MedalRack {
-        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width
         pal: center.pal
         medals: center.p ? center.p.medals : []
         seasonMedals: center.p ? center.p.seasonMedals : []
       }
-    }
   }
 
   // ------------------------------------------------------------ rings & globe
@@ -280,7 +276,7 @@ Item {
   // ------------------------------------------------------------ tooltips
   // Invisible hover zones over the pieces that are not panels.
   Item {
-    x: center.gx - 220; y: header.height - 50; width: 210; height: 48
+    x: 0; y: xpBlock.y; width: center.width; height: xpBlock.height
     HoverTip {
       pal: center.pal; raiseTarget: center
       tipWidth: 360

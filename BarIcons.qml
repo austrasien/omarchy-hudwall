@@ -131,15 +131,24 @@ HPanel {
   readonly property real cellH: bodyH / Math.ceil(count / cols)
   readonly property real f: Math.min(cellW, cellH) / 26
 
-  Grid {
-    width: parent.width
-    columns: bar.cols
-    spacing: 0
+  // Cell i's place: rows left to right, the last row centred.
+  readonly property int rowsN: Math.ceil(count / cols)
+  function cellX(i) {
+    var r = Math.floor(i / cols)
+    var inRow = r === rowsN - 1 ? count - r * cols : cols
+    return (cols - inRow) * cellW / 2 + (i - r * cols) * cellW
+  }
+  function cellY(i) { return Math.floor(i / cols) * cellH }
+
+  Item {
+    anchors.fill: parent
     Repeater {
       model: bar.cells
       Item {
         id: cell
         required property var modelData
+        required property int index
+        x: bar.cellX(index); y: bar.cellY(index)
         width: bar.cellW; height: bar.cellH
         Rectangle {
           anchors.fill: parent
@@ -185,6 +194,8 @@ HPanel {
       Item {
         id: trayItem
         required property var modelData
+        required property int index
+        x: bar.cellX(bar.cells.length + index); y: bar.cellY(bar.cells.length + index)
         width: bar.cellW; height: bar.cellH
         IconImage {
           id: trayIcon
