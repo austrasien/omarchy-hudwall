@@ -135,7 +135,7 @@ PanelWindow {
   readonly property var hp: pal
   readonly property bool any: !!herald.question || !!herald.current || !!questionCard.shown || !!toastCard.shown
   readonly property real shoulder: 18
-  readonly property real pad: 22
+  readonly property real pad: 18
   readonly property real notchW: stack.width + 2 * pad
   property real notchH: any ? stack.implicitHeight + 2 * pad - 6 : 0
   Behavior on notchH { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
@@ -211,7 +211,7 @@ PanelWindow {
         id: stack
         anchors.horizontalCenter: parent.horizontalCenter
         y: herald.notchH - implicitHeight - herald.pad + 4
-        width: 440
+        width: 380
         spacing: 22
         HeraldCard {
           id: questionCard
