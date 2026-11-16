@@ -113,7 +113,7 @@ Item {
         Column {
           id: body
           x: 14; y: 14
-          width: card.width - 28 - 60
+          width: card.width - 28 - (card.height - 20) - 6
           spacing: 6
 
           Item {
@@ -168,9 +168,10 @@ Item {
 
         // The badge inside the reticle: the reticle spins down onto it.
         Item {
-          x: card.width - 14 - width
-          y: Math.max(14, (card.height - height) / 2)
-          width: 48; height: 48
+          // As tall as the card allows, with the same margin above and below.
+          x: card.width - 12 - width
+          y: (card.height - height) / 2
+          width: Math.max(48, card.height - 20); height: width
           scale: 1 + (1 - card.seg(0.3, 0.75)) * 0.6
 
           // Once locked, it keeps turning slowly round the badge.
@@ -179,11 +180,12 @@ Item {
           Item {
             anchors.fill: parent
             rotation: card.spin * card.spinFrom + parent.turn
-            Rectangle { anchors.fill: parent; anchors.margins: 5; radius: width / 2; color: "transparent"; border.width: 1; border.color: card.bright }
-            Rectangle { x: parent.width / 2; width: 1; height: 9; color: card.bright }
-            Rectangle { x: parent.width / 2; y: parent.height - 9; width: 1; height: 9; color: card.bright }
-            Rectangle { y: parent.height / 2; width: 9; height: 1; color: card.bright }
-            Rectangle { x: parent.width - 9; y: parent.height / 2; width: 9; height: 1; color: card.bright }
+            Rectangle { anchors.fill: parent; anchors.margins: parent.width * 0.1; radius: width / 2; color: "transparent"; border.width: 1; border.color: card.bright }
+            readonly property real tick: parent.width * 0.19
+            Rectangle { x: parent.width / 2; width: 1; height: parent.tick; color: card.bright }
+            Rectangle { x: parent.width / 2; y: parent.height - parent.tick; width: 1; height: parent.tick; color: card.bright }
+            Rectangle { y: parent.height / 2; width: parent.tick; height: 1; color: card.bright }
+            Rectangle { x: parent.width - parent.tick; y: parent.height / 2; width: parent.tick; height: 1; color: card.bright }
             Rectangle { x: parent.width / 2 - 3; y: 2; width: 7; height: 3; color: card.bright }
           }
           // Centred on the whole circle, not on the glyph's baseline.
@@ -193,7 +195,7 @@ Item {
             verticalAlignment: Text.AlignVCenter
             text: card.shownLook ? card.shownLook.glyph : ""
             color: card.ink
-            font.pixelSize: 18
+            font.pixelSize: Math.round(parent.width * 0.36)
           }
           // A legendary achievement keeps pulsing once locked.
           Rectangle {
