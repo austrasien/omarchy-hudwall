@@ -171,6 +171,7 @@ Item {
       MedalRack {
         width: parent.width
         pal: center.pal
+        onShareRequested: shareHost.share()
         medals: center.p ? center.p.medals : []
         seasonMedals: center.p ? center.p.seasonMedals : []
       }
@@ -461,4 +462,8 @@ Item {
     prom: center.prom
     onWantsKeyboardChanged: center.wantsKeyboard = wantsKeyboard
   }
+
+  // SHARE: Prometheus' card built here and saved where you choose, without
+  // opening Prometheus' panel.
+  ShareHost { id: shareHost; prom: center.prom }
 }

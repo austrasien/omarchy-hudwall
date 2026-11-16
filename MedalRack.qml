@@ -8,6 +8,8 @@ import Quickshell
 // number of times it was won.
 Item {
   id: rack
+  // SHARE clicked: the HUD builds the card (ShareHost).
+  signal shareRequested()
 
   required property var pal
   property var medals: []
@@ -145,7 +147,7 @@ Item {
         anchors.fill: parent; anchors.margins: -4
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "shareCard"])
+        onClicked: rack.shareRequested()
       }
     }
   }
@@ -177,6 +179,6 @@ Item {
     raiseTarget: rack.parent
     tipWidth: 340
     tipX: (rack.width - 340) / 2
-    text: "Medals won, as a ribbon rack: 1, 2 or 3 dots = daily, weekly or monthly medal; edge stripes = harder ones; number = times won; season medals first. Hover a ribbon for its name. SHARE: Prometheus builds an image card with the rack and asks where to save it."
+    text: "Medals won, as a ribbon rack: 1, 2 or 3 dots = daily, weekly or monthly medal; edge stripes = harder ones; number = times won; season medals first. Hover a ribbon for its name. SHARE: builds an image card with the rack and asks where to save it."
   }
 }
