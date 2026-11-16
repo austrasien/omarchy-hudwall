@@ -28,7 +28,10 @@ Item {
     monitor: typeof rawConfig.monitor === "string" ? rawConfig.monitor : "",
     // 1: the HUD paints its own backdrop; below 1 the wallpaper shows through.
     backdrop: typeof rawConfig.backdrop === "number" ? Math.max(0, Math.min(1, rawConfig.backdrop)) : 1,
-    home: Array.isArray(rawConfig.home) && rawConfig.home.length === 2 ? rawConfig.home : [2.35, 48.85],
+    home: Array.isArray(rawConfig.home) && rawConfig.home.length === 2 ? rawConfig.home : [0, 51.48],
+    // The mark at the top of the right column: { image, name }; without it,
+    // the machine's name.
+    mark: rawConfig.mark && typeof rawConfig.mark === "object" ? rawConfig.mark : null,
     fps: typeof rawConfig.fps === "number" ? Math.max(5, Math.min(60, rawConfig.fps)) : 24
   })
 

@@ -46,10 +46,11 @@ keeps stale sibling components.
 | `visible` | `true` | show the HUD at all |
 | `monitor` | first screen | connector name, e.g. `eDP-1` |
 | `backdrop` | `1` | opacity of the HUD's own background; below 1 the wallpaper shows through |
-| `home` | `[2.35, 48.85]` | `[lon, lat]` where the arcs start |
+| `home` | `[0, 51.48]` | `[lon, lat]` where the arcs start |
+| `mark` | none | `{ "image": "~/path/logo.png", "name": "ACME" }`: the mark at the top of the right column (the host name without it) |
 | `fps` | `24` | globe frame rate while seen (5–60) |
 | `pingPeers` | first 3 online | Tailscale host names to ping for latency |
-| `places` | `{}` | named points always on the globe, `{ "forge": [lon, lat] }`, lit when Tailscale sees that host |
+| `places` | `{}` | named points always on the globe, `{ "server": [lon, lat] }`, lit when Tailscale sees that host |
 
 ## IPC
 

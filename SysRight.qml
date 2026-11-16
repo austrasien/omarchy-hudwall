@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Effects
+import Quickshell
 
 // Right column: the company mark with the machine, CPU, GPU, memory, NPU and
 // applications. Series take the palette's series colors (told apart in Lab);
@@ -15,6 +16,9 @@ Item {
   height: 712
 
   property real pixelScale: 1
+  // { image: path, name: text } from the config; without it, the host.
+  property var mark: null
+  readonly property string markImage: mark && mark.image ? String(mark.image).replace(/^~/, Quickshell.env("HOME")) : ""
   readonly property bool inSession: !!(prom.p && prom.p.running)
 
   function uptime(s) {
@@ -29,15 +33,15 @@ Item {
     pal: col.pal
     width: col.width; height: 80
     pad: 10
-    tip: "Askalon, and this machine: host name, kernel, time since boot."
+    tip: "This machine: host name, kernel, time since boot (the mark and name are set in hudwall.json)."
 
     Image {
       id: logo
       x: 2
       anchors.verticalCenter: parent.verticalCenter
       height: parent.height - 2
-      width: height * 400 / 327
-      source: Qt.resolvedUrl("assets/askalon-logo.png")
+      width: col.markImage ? height * Math.max(0.5, implicitWidth / Math.max(1, implicitHeight)) : 0
+      source: col.markImage ? "file://" + col.markImage : ""
       fillMode: Image.PreserveAspectFit
       smooth: true
       mipmap: true
@@ -50,11 +54,11 @@ Item {
       colorizationColor: col.pal.fg
     }
     Column {
-      x: logo.width + 16
+      x: logo.width + (logo.width > 0 ? 16 : 4)
       width: parent.width - x
       anchors.verticalCenter: parent.verticalCenter
       spacing: 3
-      HText { text: "ΛSKΛLON"; color: col.pal.fg; font.pixelSize: 14; font.letterSpacing: 4; font.weight: Font.DemiBold }
+      HText { text: col.mark && col.mark.name ? col.mark.name : (col.sys.host.name || "").toUpperCase(); color: col.pal.fg; font.pixelSize: 14; font.letterSpacing: 4; font.weight: Font.DemiBold }
       HText { width: parent.width; text: (col.sys.host.name || "") + " · " + (col.sys.host.kernel || ""); color: col.pal.dim; font.pixelSize: 9 }
       HText { text: "up " + col.uptime(col.sys.host.uptime); color: col.pal.mut; font.pixelSize: 9 }
     }

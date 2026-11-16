@@ -12,7 +12,7 @@ Item {
   required property var pal
   property bool active: false
   property real fps: 24
-  property var home: [2.35, 48.85]
+  property var home: [0, 51.48]
   property var peers: []          // [{ lat, lon, proc, city, live }]
   property real radius: 170
   property real tilt: 25

@@ -144,7 +144,7 @@ Item {
     scale: center.gs
     active: center.animate
     fps: center.cfg.fps || 24
-    home: center.cfg.home || [2.35, 48.85]
+    home: center.cfg.home || [0, 51.48]
     // The last peers, plus the places named in the config ({ name: [lon, lat] }),
     // lit when Tailscale sees that host online.
     peers: {

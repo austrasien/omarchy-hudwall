@@ -116,6 +116,7 @@ Item {
       pixelScale: hud.pixelScale
     }
     SysRight {
+      mark: hud.cfg.mark || null
       x: hud.stageW - hud.mR - hud.colW; y: hud.edge
       width: hud.colW
       pal: theme; sys: sys; prom: prom
