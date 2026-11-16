@@ -61,9 +61,15 @@ Item {
   // slow Prometheus calls) follows `active`.
 
   readonly property int shownWorkspace: targetMonitor && targetMonitor.activeWorkspace ? targetMonitor.activeWorkspace.id : -1
+  // A special workspace (scratchpad) shown on top covers the desk too.
+  readonly property bool specialShown: {
+    var m = root.targetMonitor
+    var ipc = m && m.lastIpcObject ? m.lastIpcObject : {}
+    return !!(ipc.specialWorkspace && ipc.specialWorkspace.id !== 0)
+  }
   readonly property bool deskEmpty: {
     var ws = root.shownWorkspace
-    if (ws === -1) return false
+    if (ws === -1 || root.specialShown) return false
     var values = Hyprland.toplevels.values
     for (var i = 0; i < values.length; i++) {
       var t = values[i]
@@ -91,11 +97,11 @@ Item {
     target: Hyprland
     function onRawEvent(event) {
       var n = event.name
-      if (n === "openwindow" || n === "closewindow" || n === "movewindowv2" || n === "workspacev2" || n === "focusedmonv2")
+      if (n === "openwindow" || n === "closewindow" || n === "movewindowv2" || n === "workspacev2" || n === "focusedmonv2" || n === "activespecial")
         refresh.restart()
     }
   }
-  Timer { id: refresh; interval: 120; onTriggered: Hyprland.refreshToplevels() }
+  Timer { id: refresh; interval: 120; onTriggered: { Hyprland.refreshToplevels(); Hyprland.refreshMonitors() } }
 
   // ------------------------------------------------------------ surface
 
@@ -120,6 +126,24 @@ Item {
       cfg: root.cfg
       devicePixelRatio: root.targetScreen ? root.targetScreen.devicePixelRatio : 1
     }
+  }
+
+  // The status pill, top left, while the HUD is covered: the Omarchy bar is
+  // off, so this is what is left of it over the windows.
+  PanelWindow {
+    screen: root.targetScreen
+    visible: root.cfg.visible && root.targetScreen !== null && !root.wantActive && root.cfg.pill !== false
+    color: "transparent"
+    anchors { top: true; left: true }
+    margins { top: 6; left: 52 }
+    implicitWidth: statusPill.implicitWidth
+    implicitHeight: statusPill.implicitHeight
+    WlrLayershell.namespace: "austraz-hudwall-pill"
+    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    exclusionMode: ExclusionMode.Ignore
+    exclusiveZone: 0
+    StatusPill { id: statusPill; anchors.fill: parent }
   }
 
   // A window with the same HUD, to look at it without emptying a desk.
