@@ -92,26 +92,32 @@ Item {
 
     Row {
       anchors.horizontalCenter: parent.horizontalCenter
-      spacing: 10
-      // Challenges of the session: won, the current one, the rest.
+      spacing: 18
+      // The session's challenge, in words: which one of how many, and the
+      // time it still needs (or that one is on offer).
       Row {
         visible: !!block.challenge
         spacing: 6
         anchors.verticalCenter: parent.verticalCenter
-        HText { text: "CHALLENGES"; color: block.pal.mut; font.pixelSize: 8; font.letterSpacing: 1.5 }
+        readonly property var c: block.challenge
         Repeater {
-          model: block.challenge ? block.challenge.max : 0
-          HText {
+          model: parent.c ? parent.c.max : 0
+          Rectangle {
             required property int index
-            readonly property int won: block.challenge ? block.challenge.index - 1 : 0
-            text: index < won ? "●"
-              : index === won ? (block.challenge.state === "active"
-                  ? "◐ " + block.p.formatDuration(block.challenge.remainingSeconds || 0)
-                  : "◌ offered")
-              : "○"
-            color: index < won ? block.pal.acc : index === won ? (block.challenge.state === "active" ? block.pal.acc2 : block.pal.cyan) : block.pal.mut
-            font.pixelSize: 9
+            anchors.verticalCenter: parent.verticalCenter
+            readonly property int won: parent.c ? parent.c.index - 1 : 0
+            width: 6; height: 6; radius: 3
+            color: index < won ? block.pal.series(1) : index === won ? block.pal.series(2) : "transparent"
+            border.width: 1
+            border.color: index <= won ? color : block.pal.mut
           }
+        }
+        HText {
+          anchors.verticalCenter: parent.verticalCenter
+          text: !parent.c ? "" : parent.c.state === "active"
+            ? "challenge " + parent.c.index + " / " + parent.c.max + " · " + block.p.formatDuration(parent.c.remainingSeconds || 0) + " left"
+            : "challenge " + parent.c.index + " / " + parent.c.max + " offered"
+          color: block.pal.dim; font.pixelSize: 9
         }
       }
 

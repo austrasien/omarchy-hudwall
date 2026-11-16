@@ -106,7 +106,7 @@ Item {
             }
           }
           HText {
-            visible: (rib.modelData.count || 1) > 1
+            visible: false // the count is not shown
             anchors.right: parent.right; anchors.rightMargin: 2
             anchors.bottom: parent.bottom; anchors.bottomMargin: -1
             text: rib.modelData.count
