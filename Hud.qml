@@ -34,7 +34,9 @@ Item {
   // its panels to the right of it, top-aligned.
   // `gap`: the space between two panels of a column (10 units), so the
   // panels keep the same distance from the widget.
-  readonly property var barDock: ({ right: Math.round(x + (mL + colW) * k), top: Math.round(y + edge * k), gap: Math.round(10 * k) })
+  // The bar's icons sit at the top of the right column: the bar's panels
+  // open left of them (austraz.bar's hudDock `left`).
+  readonly property var barDock: ({ left: Math.round(x + (stageW - mR - colW) * k), top: Math.round(y + edge * k), gap: Math.round(10 * k) })
   readonly property real bottomY: stageH - edge - 176
   // Where the globe ends up, in stage units.
   readonly property real globeX: centerX + center.gx
@@ -102,6 +104,7 @@ Item {
     }
 
     PromLeft {
+      mark: hud.cfg.mark || null
       x: hud.mL; y: hud.edge
       width: hud.colW
       pal: theme; prom: prom; sys: sys
@@ -118,7 +121,6 @@ Item {
       pixelScale: hud.pixelScale
     }
     SysRight {
-      mark: hud.cfg.mark || null
       x: hud.stageW - hud.mR - hud.colW; y: hud.edge
       width: hud.colW
       pal: theme; sys: sys; prom: prom

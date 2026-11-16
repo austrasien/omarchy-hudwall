@@ -2,8 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 
-// Right column: the company mark with the machine, CPU, GPU, memory, NPU and
-// applications. Series take the palette's series colors (told apart in Lab);
+// Right column: the bar's icons, CPU, GPU, memory, NPU and applications. Series take the palette's series colors (told apart in Lab);
 // legends switch series on and off; graphs label their highest peaks.
 Item {
   id: col
@@ -16,9 +15,6 @@ Item {
   height: 712
 
   property real pixelScale: 1
-  // { image: path, name: text } from the config; without it, the host.
-  property var mark: null
-  readonly property string markImage: mark && mark.image ? String(mark.image).replace(/^~/, Quickshell.env("HOME")) : ""
   readonly property bool inSession: !!(prom.p && prom.p.running)
 
   function uptime(s) {
@@ -28,47 +24,19 @@ Item {
   }
   function pct(v) { return Math.round(v * 100) + "%" }
 
-  // ---------------------------------------------------------------- mark
-  HPanel {
+  // ---------------------------------------------------------- bar icons
+  BarIcons {
     pal: col.pal
-    width: col.width; height: 80
-    pad: 10
-    tip: "This machine: host name, kernel, time since boot (the mark and name are set in hudwall.json)."
-
-    Image {
-      id: logo
-      x: 2
-      anchors.verticalCenter: parent.verticalCenter
-      height: parent.height - 2
-      width: col.markImage ? height * Math.max(0.5, implicitWidth / Math.max(1, implicitHeight)) : 0
-      source: col.markImage ? "file://" + col.markImage : ""
-      fillMode: Image.PreserveAspectFit
-      smooth: true
-      mipmap: true
-      visible: false
-    }
-    MultiEffect {
-      anchors.fill: logo
-      source: logo
-      colorization: 1.0
-      colorizationColor: col.pal.fg
-    }
-    Column {
-      x: logo.width + (logo.width > 0 ? 16 : 4)
-      width: parent.width - x
-      anchors.verticalCenter: parent.verticalCenter
-      spacing: 3
-      HText { text: col.mark && col.mark.name ? col.mark.name : (col.sys.host.name || "").toUpperCase(); color: col.pal.fg; font.pixelSize: 14; font.letterSpacing: 4; font.weight: Font.DemiBold }
-      HText { width: parent.width; text: (col.sys.host.name || "") + " · " + (col.sys.host.kernel || ""); color: col.pal.dim; font.pixelSize: 9 }
-      HText { text: "up " + col.uptime(col.sys.host.uptime); color: col.pal.mut; font.pixelSize: 9 }
-    }
+    sys: col.sys
+    width: col.width; height: 106
+    tip: "The Omarchy bar's widgets, the bar itself being hidden: clock, weather, world clocks, volume, Bluetooth, Tailscale, NordVPN, agents, Prometheus, screens, CamGuard, Flux, then the system tray (network and battery: click their panels at the bottom). Click a cell to open that widget's panel, beside this widget; tray icons: click, middle click, right click for their menu."
   }
 
   // ---------------------------------------------------------------- cpu
   HPanel {
     id: cpuPanel
     pal: col.pal
-    y: 90; width: col.width; height: 124
+    y: 116; width: col.width; height: 114
     label: "CPU · " + (col.sys.cpu.threads ? col.sys.cpu.threads.length : "–") + " threads"
     note: col.sys.cpu.temp ? col.sys.cpu.temp + " °C" : ""
     tip: "Dial: load of the whole machine, clock in the middle; inner ring: CPU temperature (out of 100 °C). Graph: load over the last minute, highest peaks labelled. Bars: each thread now (accent while a Prometheus session runs)."
@@ -125,7 +93,7 @@ Item {
   HPanel {
     id: gpuPanel
     pal: col.pal
-    y: 224; width: col.width; height: 120
+    y: 240; width: col.width; height: 112
     label: "GPU"
     note: col.sys.gpu.temp ? col.sys.gpu.temp + " °C" : ""
     tip: "Integrated GPU (amdgpu). Dial: load, clock in the middle; inner ring: temperature. Graph: load and power over the last minute (click a legend entry to hide it). Bars: dedicated video memory (VRAM) and system memory it borrows (GTT)."
@@ -204,7 +172,7 @@ Item {
   HPanel {
     id: memPanel
     pal: col.pal
-    y: 480; width: col.width; height: 106
+    y: 488; width: col.width; height: 98
     label: "RAM"
     note: col.sys.mem.total ? Math.round(col.sys.mem.total / 1073741824) + " GB" : ""
     tip: "RAM split: used by programs, page cache (freed when needed), compressed swap in zram, free. Graph: the last minute of each, out of the whole RAM. Click a legend entry to leave it out of the ring and the graph."
@@ -296,7 +264,7 @@ Item {
   HPanel {
     id: npuPanel
     pal: col.pal
-    y: 354; width: col.width; height: 116
+    y: 362; width: col.width; height: 116
     // The model's name without its size and runtime suffix, then its size
     // read from the name ("35b-a3b": 35 billion parameters, 3 active per
     // token in a mixture of experts); Lemonade does not report it.

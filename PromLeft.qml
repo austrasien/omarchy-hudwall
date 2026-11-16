@@ -10,6 +10,7 @@ Item {
   required property var pal
   required property var prom
   required property var sys
+  property var mark: null
   readonly property var p: prom.p
 
   width: 330
@@ -26,11 +27,11 @@ Item {
   }
 
   // ------------------------------------------------------------- status
-  BarIcons {
+  MarkPanel {
     pal: col.pal
     sys: col.sys
-    width: col.width; height: 106
-    tip: "The Omarchy bar's widgets, the bar itself being hidden: clock, weather, world clocks, volume, Bluetooth, Tailscale, NordVPN, agents, Prometheus, screens, CamGuard, Flux, then the system tray (network and battery: click their panels at the bottom). Click a cell to open that widget's panel, beside this widget; tray icons: click, middle click, right click for their menu."
+    mark: col.mark
+    width: col.width; height: 80
   }
 
 
@@ -38,7 +39,7 @@ Item {
   HPanel {
     id: leaguePanel
     pal: col.pal
-    y: 116; width: col.width; height: 300
+    y: 90; width: col.width; height: 326
     label: "League"
     tip: "Weekly league race against 9 historical rivals. Axis: XP this week; dots = the other players in their zone's colour, the white marker = you; the promotion and safety lines are the XP needed to move up or stay. At week end the top ranks move up a league, the bottom ones down. Bars: your XP per day by source (click a legend entry to hide it). Hover the rival for their bio. Click the panel: Leagues tab."
     note: col.prom.league ? col.prom.league.daysLeft + " days left" : ""

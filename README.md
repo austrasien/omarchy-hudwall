@@ -17,10 +17,10 @@ shell on the Bottom layer: above the wallpaper, under every window.
   the screen over every window, in a notch.
 - **System**: CPU, GPU, the NPU (Lemonade) over 24 h, RAM, applications,
   network and Tailscale peers, battery with the day from UPower.
-- **The bar's icons**, top left, while the Omarchy bar stays hidden: with
+- **The bar's icons**, top right, while the Omarchy bar stays hidden: with
   [austraz.bar](https://github.com/austrasien/omarchy-bar) and
   [austraz.tray](https://github.com/austrasien/omarchy-tray), their panels
-  open beside the widget.
+  open left of the widget. The company mark (`mark` in hudwall.json) sits top left.
 
 It only animates and collects while the workspace shown on its monitor has
 no window. Covered, it costs nothing.
