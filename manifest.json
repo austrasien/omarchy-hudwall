@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "austraz.hudwall",
   "name": "HUD wallpaper",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": "austrasien",
   "license": "MIT",
   "description": "A live HUD behind the windows: a globe of the machine's last network peers, CPU, memory, NPU, network and battery, and Prometheus (league, season, medals, quests, session). Animates only while the desk is empty.",
