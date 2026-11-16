@@ -3,17 +3,24 @@
 A live HUD behind the windows of an Omarchy desktop, drawn by the Omarchy
 shell on the Bottom layer: above the wallpaper, under every window.
 
-- **Centre**: a globe turning once a minute, lit by the real sun, with arcs
-  from home to the last ten public peers this machine connected to; around
-  it, today's 24 hours cut by application and the year, a tick a day.
+- **Centre**: a globe lit by the real sun, with arcs from home to the last
+  ten public peers this machine talked to (the app's icon on each), land
+  dots heated by the bytes exchanged; it sweeps over the routes only when
+  they do not all fit its visible face. Around it, today's 24 hours cut by
+  application and the year, a tick a day.
 - **Prometheus** ([omarchy-prometheus](https://github.com/austrasien/omarchy-prometheus)):
-  level and XP, the medal rack, league race and rival, season, leaderboards,
-  quests and achievements, the session with its controls and challenges,
-  questions ("Still there?", the challenge offer, "Break?", "Coffee?"),
-  league and season ends, caffeine, focus quality, ghost race, insights,
-  the week. Tasks stay behind a closed chip: their names only show on hover.
-- **System**: CPU per thread, memory, the NPU (Lemonade), applications,
+  level and XP, the medal rack, league race and rival, the season and its
+  medal, quests and achievements, the session with its controls and
+  challenges, caffeine and its effect on tokens, focus quality, ghost races
+  (focus and agent tokens), today against yesterday, the week. Its messages
+  (medals, achievements, "Still there?", coffee) come down from the top of
+  the screen over every window, in a notch.
+- **System**: CPU, GPU, the NPU (Lemonade) over 24 h, RAM, applications,
   network and Tailscale peers, battery with the day from UPower.
+- **The bar's icons**, top left, while the Omarchy bar stays hidden: with
+  [austraz.bar](https://github.com/austrasien/omarchy-bar) and
+  [austraz.tray](https://github.com/austrasien/omarchy-tray), their panels
+  open beside the widget.
 
 It only animates and collects while the workspace shown on its monitor has
 no window. Covered, it costs nothing.
