@@ -249,28 +249,60 @@ Item {
   }
 
   // ------------------------------------------------------------ insights
+  // Today against yesterday at the same hour (time in session, time at the
+  // desk), the app used most today, and the busiest day of this week.
   Column {
-    x: center.width - 170; y: center.sessionY - 100; width: 170
+    x: center.width - 190; y: center.sessionY - 112; width: 190
     spacing: 2
     readonly property var ins: center.prom.insights
-    function delta() {
-      if (!ins) return "–"
-      var d = (ins.today.focusSeconds || 0) - (ins.yesterdaySameTime.focusSeconds || 0)
-      var t = (ins.today.trackedSeconds || 0) - (ins.yesterdaySameTime.trackedSeconds || 0)
-      var v = d !== 0 ? d : t
-      return (v >= 0 ? "+" : "−") + center.hm(Math.abs(v)) + (d !== 0 ? " focus" : " tracked")
+    function line(key) {
+      if (!ins) return { v: "–", d: "" }
+      var a = ins.today[key] || 0, b = ins.yesterdaySameTime[key] || 0
+      return { v: center.hm(a), d: (a >= b ? "+" : "−") + center.hm(Math.abs(a - b)) }
     }
-    HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: "INSIGHTS"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2 }
-    HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: "vs yesterday same time " + parent.delta(); color: center.pal.dim; font.pixelSize: 9 }
-    HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: parent.ins && parent.ins.topApp ? "top app " + parent.ins.topApp.app : ""; color: center.pal.dim; font.pixelSize: 9 }
-    HText {
-      width: parent.width; horizontalAlignment: Text.AlignRight
-      text: parent.ins && parent.ins.busiestDay ? "busiest day " + Qt.locale("en_GB").toString(new Date(parent.ins.busiestDay.date + "T12:00:00"), "ddd d MMM") : ""
-      color: center.pal.dim; font.pixelSize: 9
+    component Pair: Item {
+      property string k: ""
+      property string v: ""
+      property string d: ""
+      property bool up: true
+      property bool tone: true      // colour the second figure as a gain or a loss
+      width: parent.width; height: 12
+      HText { width: parent.width - values.width - 8; text: parent.k; color: center.pal.dim; font.pixelSize: 9 }
+      Row {
+        id: values
+        anchors.right: parent.right
+        spacing: 6
+        HText { width: Math.min(implicitWidth, 96); text: parent.parent.v; color: center.pal.fg; font.pixelSize: 9 }
+        HText {
+          text: parent.parent.d
+          color: !parent.parent.tone ? center.pal.dim : parent.parent.up ? center.pal.series(1) : center.pal.series(4)
+          font.pixelSize: 9
+        }
+      }
+    }
+    HText { width: parent.width; horizontalAlignment: Text.AlignRight; text: "TODAY VS YESTERDAY, SAME HOUR"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 1.5 }
+    Pair {
+      readonly property var l: parent.line("focusSeconds")
+      k: "in session"; v: l.v; d: l.d; up: l.d.charAt(0) !== "−"
+    }
+    Pair {
+      readonly property var l: parent.line("trackedSeconds")
+      k: "at the desk"; v: l.v; d: l.d; up: l.d.charAt(0) !== "−"
+    }
+    Item { width: 1; height: 3 }
+    Pair {
+      k: "most used today"; tone: false
+      v: parent.ins && parent.ins.topApp ? parent.ins.topApp.app : "–"
+      d: parent.ins && parent.ins.topApp ? center.hm(parent.ins.topApp.seconds) : ""
+    }
+    Pair {
+      k: "busiest this week"; tone: false
+      v: parent.ins && parent.ins.busiestDay ? Qt.locale("en_GB").toString(new Date(parent.ins.busiestDay.date + "T12:00:00"), "ddd d") : "–"
+      d: parent.ins && parent.ins.busiestDay ? center.hm(parent.ins.busiestDay.trackedSeconds) : ""
     }
   }
   MouseArea {
-    x: center.width - 170; y: center.sessionY - 100; width: 170; height: 52
+    x: center.width - 190; y: center.sessionY - 112; width: 190; height: 70
     cursorShape: Qt.PointingHandCursor
     onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", "stats"])
   }
@@ -305,7 +337,7 @@ Item {
     x: center.width - 170; y: center.sessionY - 100; width: 170; height: 52
     HoverTip {
       pal: center.pal; raiseTarget: center; above: true; tipWidth: 260; tipX: -90
-      text: "Today against yesterday at the same hour (focus, or tracked time if no focus yet), your most used app today, and your busiest day. Click: Stats tab."
+      text: "Today against yesterday at the same hour: time in focus sessions and time at the desk (tracked activity), with the difference. Then the app you used most today, and the busiest day of this week (most time at the desk). Click: Stats tab."
     }
   }
   Item {
