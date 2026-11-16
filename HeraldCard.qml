@@ -152,7 +152,7 @@ Item {
             width: parent.width
             text: card.shown ? card.shown.title || "" : ""
             color: card.ink
-            font.family: Style.fontFamily; font.pixelSize: 16; font.bold: true
+            font.family: Style.fontFamily; font.pixelSize: 15; font.bold: true
             font.capitalization: Font.AllUppercase
             wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
           }
@@ -161,7 +161,7 @@ Item {
             width: parent.width
             text: !card.shown ? "" : card.shown.textFn ? card.shown.textFn() : card.shown.text || ""
             color: card.bright
-            font.family: Style.fontFamily; font.pixelSize: 12
+            font.family: Style.fontFamily; font.pixelSize: 12; font.bold: true
             wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
           }
         }
@@ -173,9 +173,12 @@ Item {
           width: 48; height: 48
           scale: 1 + (1 - card.seg(0.3, 0.75)) * 0.6
 
+          // Once locked, it keeps turning slowly round the badge.
+          property real turn: 0
+          NumberAnimation on turn { running: card.visible; from: 0; to: 360; duration: 9000; loops: Animation.Infinite }
           Item {
             anchors.fill: parent
-            rotation: card.spin * card.spinFrom
+            rotation: card.spin * card.spinFrom + parent.turn
             Rectangle { anchors.fill: parent; anchors.margins: 5; radius: width / 2; color: "transparent"; border.width: 1; border.color: card.bright }
             Rectangle { x: parent.width / 2; width: 1; height: 9; color: card.bright }
             Rectangle { x: parent.width / 2; y: parent.height - 9; width: 1; height: 9; color: card.bright }
@@ -183,11 +186,14 @@ Item {
             Rectangle { x: parent.width - 9; y: parent.height / 2; width: 9; height: 1; color: card.bright }
             Rectangle { x: parent.width / 2 - 3; y: 2; width: 7; height: 3; color: card.bright }
           }
+          // Centred on the whole circle, not on the glyph's baseline.
           Text {
-            anchors.centerIn: parent
+            anchors.fill: parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             text: card.shownLook ? card.shownLook.glyph : ""
             color: card.ink
-            font.pixelSize: 17
+            font.pixelSize: 18
           }
           // A legendary achievement keeps pulsing once locked.
           Rectangle {
