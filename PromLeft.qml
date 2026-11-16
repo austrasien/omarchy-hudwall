@@ -37,7 +37,7 @@ Item {
   HPanel {
     id: leaguePanel
     pal: col.pal
-    y: 116; width: col.width; height: 186
+    y: 116; width: col.width; height: 300
     label: "League"
     tip: "Weekly league race against 9 historical rivals. Axis: XP this week; dots = the other players in their zone's colour, the white marker = you; the promotion and safety lines are the XP needed to move up or stay. At week end the top ranks move up a league, the bottom ones down. Bars: your XP per day by source (click a legend entry to hide it). Hover the rival for their bio. Click the panel: Leagues tab."
     note: col.prom.league ? col.prom.league.daysLeft + " days left" : ""
@@ -155,14 +155,14 @@ Item {
     // every player as a dot in their zone's colour, you as the tall marker.
     Item {
       id: race
-      y: 54; width: parent.width; height: 30
+      y: 62; width: parent.width; height: 44
       readonly property real maxXp: {
         var m = Math.max(1, leaguePanel.promoXp)
         for (var i = 0; i < leaguePanel.players.length; i++) m = Math.max(m, leaguePanel.players[i].xp)
         return m * 1.06
       }
       function xAt(xp) { return width * xp / maxXp }
-      readonly property real axisY: 18
+      readonly property real axisY: 22
       Rectangle { y: race.axisY; width: parent.width; height: 2; color: col.pal.alpha(col.pal.fg, 0.08) }
       // Zones: under the safety line, past the promotion line.
       Rectangle {
@@ -182,12 +182,17 @@ Item {
         ]
         Item {
           required property var modelData
+          required property int index
           visible: modelData.xp > 0
           x: race.xAt(modelData.xp)
-          Rectangle { y: race.axisY - 5; width: 1; height: 12; color: modelData.c }
+          Rectangle { y: race.axisY - 6; width: 1; height: 14; color: modelData.c }
+          // Below the axis, kept inside the panel; the safety line's name
+          // sits on the left of its line, the promotion's on the right, so
+          // they never meet.
           HText {
-            x: -width / 2; y: race.axisY + 6
-            text: modelData.t; color: modelData.c; font.pixelSize: 7
+            x: index === 0 ? -width - 3 : 3
+            y: race.axisY + 9
+            text: modelData.t; color: modelData.c; font.pixelSize: 8
           }
         }
       }
@@ -209,17 +214,18 @@ Item {
       Item {
         visible: !!leaguePanel.lg
         x: race.xAt(leaguePanel.lg ? leaguePanel.lg.xp : 0)
-        Rectangle { x: -1; y: 4; width: 2; height: race.axisY; color: col.pal.fg }
+        Rectangle { x: -1; y: 12; width: 2; height: race.axisY - 12; color: col.pal.fg }
         Rectangle { x: -4; y: race.axisY - 3; width: 8; height: 8; radius: 4; color: col.pal.fg }
         HText {
-          x: Math.max(-race.xAt(leaguePanel.lg ? leaguePanel.lg.xp : 0), -width / 2); y: -8
+          x: Math.max(-race.xAt(leaguePanel.lg ? leaguePanel.lg.xp : 0), Math.min(race.width - race.xAt(leaguePanel.lg ? leaguePanel.lg.xp : 0) - width, -width / 2))
+          y: -2
           text: "you " + (leaguePanel.lg ? leaguePanel.lg.xp : 0) + " XP"
-          color: col.pal.fg; font.pixelSize: 8; font.weight: Font.DemiBold
+          color: col.pal.fg; font.pixelSize: 9; font.weight: Font.DemiBold
         }
       }
     }
     HText {
-      y: 90; width: parent.width
+      y: 116; width: parent.width
       text: !leaguePanel.lg ? "" : leaguePanel.lg.toPromotion > 0
         ? "+" + leaguePanel.lg.toPromotion + " XP to promotion" + (leaguePanel.lg.zone === "relegation" && leaguePanel.lg.toSafety > 0 ? " · +" + leaguePanel.lg.toSafety + " to be safe" : "")
         : "in the promotion zone"
@@ -245,7 +251,7 @@ Item {
     readonly property real maxDay: Math.max(1, Math.max.apply(null, totals.concat([0])) * 1.25)
     Legend {
       id: xpLegend
-      y: 106
+      y: 142
       pal: col.pal
       width: parent.width
       spacing: 8
@@ -254,7 +260,7 @@ Item {
     Item {
       id: xpBars
       anchors.bottom: parent.bottom
-      width: parent.width; height: 24
+      width: parent.width; height: parent.height - 162
       readonly property real slot: width / Math.max(1, leaguePanel.xpDays.length)
       Repeater {
         model: leaguePanel.xpDays
@@ -299,7 +305,7 @@ Item {
   HPanel {
     id: seasonPanel
     pal: col.pal
-    y: 312; width: col.width; height: 104
+    y: 426; width: col.width; height: 104
     readonly property var s: col.prom.season
     label: s ? "Season " + s.number + " · " + s.label : "Season"
     note: s ? Math.max(0, Math.ceil((new Date(s.end + "T23:59:59") - Date.now()) / 86400000)) + " days left" : ""
@@ -368,58 +374,11 @@ Item {
     }
   }
 
-  // -------------------------------------------------------- leaderboards
-  HPanel {
-    id: boardsPanel
-    pal: col.pal
-    y: 426; width: col.width; height: 106
-    label: "Leaderboards"
-    tip: "Your current score against your all-time best on each board (cyan tick = the record). Bottom: today's rank among all your days. Click: Leaderboards tab."
-    note: "now / record"
-    tab: "leaderboard"
-
-    readonly property var rows: [
-      { key: "days", name: "Best day" },
-      { key: "weeks", name: "Best week" },
-      { key: "sessions", name: "Best session" },
-      { key: "quests", name: "Best quest" }
-    ]
-    Column {
-      width: parent.width
-      spacing: 5
-      Repeater {
-        model: boardsPanel.rows
-        Row {
-          id: brow
-          required property var modelData
-          readonly property var b: col.prom.boards[modelData.key]
-          readonly property var best: b && b.entries && b.entries.length ? b.entries[0] : null
-          readonly property var you: b ? b.you : null
-          readonly property real cur: you && you.current ? you.value : 0
-          width: parent.width
-          spacing: 8
-          HText { width: 118; text: brow.modelData.name; color: col.pal.fg }
-          HBar {
-            pal: col.pal
-            width: parent.width - 118 - 104 - 16; anchors.verticalCenter: parent.verticalCenter
-            value: brow.best && brow.best.value > 0 ? brow.cur / brow.best.value : 0
-            marks: [{ at: 1, color: col.pal.cyan }]
-          }
-          HText {
-            width: 104; horizontalAlignment: Text.AlignRight
-            text: brow.best ? (brow.you && brow.you.current ? brow.cur : "–") + " / " + brow.best.value + " " + (brow.best.unit || "") : "–"
-            color: col.pal.dim; font.pixelSize: 9
-          }
-        }
-      }
-    }
-  }
-
   // ------------------------------------------------ quests & achievements
   HPanel {
     id: questPanel
     pal: col.pal
-    y: 542; width: col.width; height: 170
+    y: 540; width: col.width; height: 172
     label: "Quests · achievements"
     tip: "Open quests (▶ = the active one; hover a row to activate, set aside or complete it). Next achievements: the tiers closest to unlocking, with your progress. Capsules: your latest unlocked achievements, coloured by rarity. Click the panel: Quests tab."
     tipAbove: true

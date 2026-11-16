@@ -274,7 +274,7 @@ Item {
     pal: row.pal
     x: row.px(2); width: row.pw; height: 176
     label: "Caffeine"
-    tip: "Caffeine estimated in your body (mg) and the best time for the next cup. Curve: today, dashed = forecast, vertical line = best time, dotted = the 'another cup is worth it' level. Bottom: average change on days with coffee. Hover: have a coffee now, or log one drunk earlier (type its time, HH:mm)."
+    tip: "Caffeine estimated in your body (mg) and the best time for the next cup. Curve: today, dashed = forecast, vertical line = best time, dotted = the 'another cup is worth it' level. Bottom: agent tokens, focus and tasks on days with coffee against days without (over the days compared), and the tokens that come with each cup. Hover: have a coffee now, or log one drunk earlier (type its time, HH:mm)."
     tipAbove: true
     tab: "stats"
     readonly property var cd: row.prom.coffeeDay
@@ -342,7 +342,7 @@ Item {
     }
     HiCanvas {
       id: curve
-      y: 34; width: parent.width; height: 80
+      y: 34; width: parent.width; height: 66
       pixelScale: row.pixelScale
       property var cdata: coffee.cd
       onCdataChanged: requestPaint()
@@ -380,17 +380,42 @@ Item {
         for (i = 0; i < cups.length; i++) ctx.fillText("☕", X(cups[i].at || cups[i]) - 4, height)
       }
     }
-    HText {
+    // What coffee does: the average day with a cup against one without,
+    // and the tokens that come with each cup.
+    Column {
+      id: effect
       anchors.bottom: parent.bottom
       width: parent.width
-      readonly property var cmp: row.prom.coffeeStats && row.prom.coffeeStats.compare ? row.prom.coffeeStats.compare : null
+      spacing: 2
+      readonly property var st: row.prom.coffeeStats
+      readonly property var cmp: st && st.compare ? st.compare : null
       function pct(k) {
         if (!cmp || !cmp[k] || !cmp[k].without) return "–"
         var v = Math.round((cmp[k].with / cmp[k].without - 1) * 100)
-        return (v >= 0 ? "+" : "") + v + " %"
+        return (v >= 0 ? "+" : "") + v + "%"
       }
-      text: "with coffee: " + pct("focus") + " focus · " + pct("tasks") + " tasks · " + pct("tokens") + " tokens"
-      color: row.pal.dim; font.pixelSize: 8
+      HText { text: "WITH COFFEE · " + (effect.st ? effect.st.daysCompared : "–") + " DAYS"; color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2 }
+      Row {
+        spacing: 10
+        Repeater {
+          model: [
+            { k: "tokens", n: "tokens", c: row.pal.series(1) },
+            { k: "focus", n: "focus", c: row.pal.series(0) },
+            { k: "tasks", n: "tasks", c: row.pal.series(2) }
+          ]
+          Row {
+            required property var modelData
+            spacing: 3
+            HText { text: effect.pct(modelData.k); color: modelData.c; font.pixelSize: 10; font.weight: Font.DemiBold }
+            HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 1; text: modelData.n; color: row.pal.dim; font.pixelSize: 8 }
+          }
+        }
+      }
+      HText {
+        visible: !!(effect.st && effect.st.tokensPerCup)
+        text: effect.st && effect.st.tokensPerCup ? "≈ " + row.tokens(effect.st.tokensPerCup / 1e6) + " tokens per cup" : ""
+        color: row.pal.dim; font.pixelSize: 8
+      }
     }
   }
 
