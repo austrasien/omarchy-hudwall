@@ -84,7 +84,7 @@ Item {
   }
   property bool previewOpen: false
   property var hudItem: null
-  // Super+H held: the HUD comes over the windows until the key is let go,
+  // Super+H: the HUD comes over the windows until Super+H again,
   // coming up like an old VHS tape whose grid drops out tile by tile
   // (shaders/fog.frag), and closing back faster.
   property bool peeking: false
@@ -282,8 +282,11 @@ Item {
       for (var i = 1; i < parts.length && o !== undefined && o !== null; i++) o = o[parts[i]]
       try { return JSON.stringify(o) } catch (e) { return String(o) }
     }
-    // `peek on` / `peek off`: bound to Super+H pressed and released.
-    function peek(state: string): string { root.peeking = state === "on"; return root.peeking ? "on" : "off" }
+    // `peek on|off|toggle` (Super+H toggles it).
+    function peek(state: string): string {
+      root.peeking = state === "toggle" ? !root.peeking : state === "on"
+      return root.peeking ? "on" : "off"
+    }
     // `geekTest on|off`: show a geek day in the header.
     function geekTest(state: string): string {
       hud.promData.geekDate = state === "on" ? ["towel", "Towel Day", "Carry a towel all day, for Douglas Adams.", "Don't panic"] : null

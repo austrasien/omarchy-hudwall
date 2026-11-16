@@ -64,27 +64,22 @@ keeps stale sibling components.
 ```bash
 omarchy-shell austraz.hudwall preview   # the HUD in a window, to look at it with a busy desk
 omarchy-shell austraz.hudwall status    # active, deskEmpty, workspace, preview
-omarchy-shell austraz.hudwall peek on   # the HUD over the windows (peek off: back under them)
+omarchy-shell austraz.hudwall peek toggle   # the HUD over the windows, or back under them (also on / off)
 ```
 
-### Peek with a key held
+### Peek with a key
 
-To bring the HUD over the windows while a key is held (here Super+H), in
-`~/.config/hypr/bindings.lua`:
+To bring the HUD over the windows with a key (here Super+H, again to send it
+back), in `~/.config/hypr/bindings.lua`:
 
 ```lua
 hl.unbind("SUPER + H")
-o.bind("SUPER + H", "Peek at the HUD", hl.dsp.exec_cmd("omarchy-shell austraz.hudwall peek on"))
-o.bind("SUPER + H", "Hide the HUD", hl.dsp.exec_cmd("omarchy-shell austraz.hudwall peek off"),
-  { release = true, transparent = true, ignore_mods = true, non_consuming = true })
+o.bind("SUPER + H", "Show/hide the HUD over the windows",
+  hl.dsp.exec_cmd("omarchy-shell austraz.hudwall peek toggle"))
 ```
 
-The release bind must stay `non_consuming`, or a plain H stops typing. The
-HUD comes up like an old VHS tape whose grid drops out tile by tile
-(`shaders/fog.frag`), and goes back the same way when H is let go.
-
-Clicks on Prometheus panels open the matching tab of the bar panel through
-`omarchy-shell austraz.prometheus openTab <tab>`.
+The HUD comes up like an old VHS tape whose grid drops out tile by tile
+(`shaders/fog.frag`), and goes back the same way.
 
 ### The HUD as every theme's background
 
