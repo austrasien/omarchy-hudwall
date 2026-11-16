@@ -20,6 +20,44 @@ Item {
 
   property real lon0: home[0] - 20
   property real phase: 0
+
+  // Where the globe looks: the smallest span of longitudes holding home and
+  // every route's end (the circle cut at its widest empty gap). When it fits
+  // in the visible face, the globe settles on its middle and stays; when it
+  // does not, it sweeps left and right over that span only.
+  readonly property real faceHalf: 65
+  readonly property var span: {
+    var l = [globe.home[0]]
+    var list = globe.peers || []
+    for (var i = 0; i < list.length; i++) if (list[i].lon !== undefined) l.push(list[i].lon)
+    l = l.map(function(x) { return ((x % 360) + 360) % 360 })
+    l.sort(function(a, b) { return a - b })
+    var gap = 0, after = l[0]
+    for (var k = 0; k < l.length; k++) {
+      var next = k + 1 < l.length ? l[k + 1] : l[0] + 360
+      if (next - l[k] > gap) { gap = next - l[k]; after = next }
+    }
+    var width = l.length > 1 ? 360 - gap : 0
+    return { start: after % 360, width: width, centre: (after + width / 2) % 360 }
+  }
+  readonly property bool sweeping: span.width / 2 > faceHalf
+  property real sweepT: 0
+  // The shortest signed turn from a to b, in degrees.
+  function turn(a, b) { return ((b - a) % 360 + 540) % 360 - 180 }
+  function steer(dt) {
+    var target
+    if (sweeping) {
+      // From one end of the span to the other and back, about 6 degrees a
+      // second, easing at the ends.
+      var amp = span.width / 2 - faceHalf
+      var period = Math.max(20, 4 * amp / 6)
+      sweepT = (sweepT + dt) % period
+      target = span.centre + amp * Math.sin(2 * Math.PI * sweepT / period)
+    } else {
+      target = span.centre
+    }
+    lon0 = (lon0 + turn(lon0, target) * Math.min(1, dt * 1.5) + 360) % 360
+  }
   property var sunPos: sun()
 
   readonly property real cx: width / 2
@@ -32,7 +70,7 @@ Item {
     repeat: true
     running: globe.active && globe.visible
     onTriggered: {
-      globe.lon0 = (globe.lon0 + 6 / globe.fps) % 360   // one turn a minute
+      globe.steer(1 / globe.fps)
       globe.phase = (globe.phase + 1 / (globe.fps * 3)) % 1
       globe.frame = globe.computeFrame()
     }
