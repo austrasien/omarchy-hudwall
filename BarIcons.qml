@@ -109,8 +109,7 @@ HPanel {
     { glyph: g(0xF0238), value: "focus", target: "austraz.prometheus", fn: "openTab", args: ["session"] },
     { glyph: g(0xF0379), value: "screens", target: "im0001gt.screens" },
     { glyph: g(0xF0100), value: "camguard", target: "austraz.camguard" },
-    { glyph: g(0xF011C), value: "flux", target: "shell", fn: "toggle", args: ["flux", "{}"] },
-    { glyph: g(0xF030C), value: layout || "kbd", target: "" }
+    { glyph: g(0xF011C), value: "flux", target: "shell", fn: "toggle", args: ["flux", "{}"] }
   ]
 
   // A regular grid over the whole body: the column count that gives the
