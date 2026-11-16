@@ -41,20 +41,21 @@ Item {
     id: labelText
     visible: panel.label.length > 0
     x: panel.pad; y: panel.pad - 2
+    // All the room the note leaves.
+    width: panel.width - 2 * panel.pad - (panel.note.length ? noteText.implicitWidth + 10 : 0)
     // Steps aside for the hints when both would not fit.
     opacity: hover.hovered && hints.opacity > 0 && contentWidth + hints.implicitWidth + 12 > panel.width - 2 * panel.pad ? 0 : 0.9
     Behavior on opacity { NumberAnimation { duration: Style.duration(160) } }
-    width: panel.width / 2
     text: panel.label.toUpperCase()
     color: panel.pal.acc
     font.pixelSize: 9
     font.letterSpacing: 2
   }
   HText {
+    id: noteText
     visible: panel.note.length > 0
     anchors.right: parent.right; anchors.rightMargin: panel.pad
     y: panel.pad - 2
-    width: panel.width / 2
     horizontalAlignment: Text.AlignRight
     text: panel.note.toUpperCase()
     color: panel.pal.dim

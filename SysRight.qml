@@ -297,9 +297,18 @@ Item {
     id: npuPanel
     pal: col.pal
     y: 354; width: col.width; height: 116
-    label: "NPU · " + (col.sys.npu.model || "Lemonade")
+    // The model's name without its size and runtime suffix, then its size
+    // read from the name ("35b-a3b": 35 billion parameters, 3 active per
+    // token in a mixture of experts); Lemonade does not report it.
+    readonly property var size: {
+      var m = /(\d+(?:\.\d+)?)b(?:-a(\d+(?:\.\d+)?)b)?/i.exec(col.sys.npu.model || "")
+      return m ? { total: m[1], active: m[2] || "" } : null
+    }
+    readonly property string shortName: (col.sys.npu.model || "Lemonade")
+      .replace(/[-_]?\d+(?:\.\d+)?b(?:-a\d+(?:\.\d+)?b)?/i, "").replace(/-(FLM|GGUF|ONNX|OGA.*)$/i, "")
+    label: "NPU · " + shortName + (size ? " · " + size.total + "B" + (size.active ? " / " + size.active + "B" : "") : "")
     note: col.sys.npu.up ? (col.sys.npu.busy ? "busy" : "ready") : "stopped"
-    tip: "The local LLM on the NPU (Lemonade). Speed of the last generation and the request queue. Bars: the last 24 hours, busy time per hour by client (from the npu-queue journal, so it survives restarts); click a legend entry to hide a client. Peaks: busy minutes."
+    tip: "The local LLM on the NPU (Lemonade), with its size read from its name: total parameters / active per token (a mixture of experts). Speed of the last generation and the request queue. Bars: the last 24 hours, busy time per hour by client (from the npu-queue journal, so it survives restarts); click a legend entry to hide a client. Peaks: busy minutes."
     readonly property var day: col.sys.npuDay
     readonly property var clients: {
       var tot = {}
