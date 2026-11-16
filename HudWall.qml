@@ -88,7 +88,7 @@ Item {
     if (wantActive) { settle.stop(); active = true }
     else settle.restart()
   }
-  Component.onCompleted: { active = wantActive; barSync.restart() }
+  Component.onCompleted: active = wantActive
   Timer { id: settle; interval: 3000; onTriggered: root.active = root.wantActive }
 
   // Hyprland only sends toplevel events; refresh the IPC objects so
@@ -126,18 +126,6 @@ Item {
       cfg: root.cfg
       devicePixelRatio: root.targetScreen ? root.targetScreen.devicePixelRatio : 1
     }
-  }
-
-  // The Omarchy bar shows only on the HUD: on an empty desk it comes back
-  // with all its icons and menus, over windows it stays hidden.
-  // cfg.barOnHud = false leaves the bar alone.
-  readonly property bool barShown: cfg.visible && cfg.barOnHud !== false && wantActive
-  onBarShownChanged: barSync.restart()
-  Timer {
-    id: barSync
-    interval: 150
-    onTriggered: if (root.cfg.barOnHud !== false)
-      Quickshell.execDetached(["omarchy", "toggle", "bar", root.barShown ? "off" : "on"])
   }
 
   // A window with the same HUD, to look at it without emptying a desk.

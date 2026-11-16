@@ -25,12 +25,13 @@ Item {
   }
 
   // ------------------------------------------------------------- status
-  StatusPanel {
+  BarIcons {
     pal: col.pal
     sys: col.sys
     width: col.width; height: 80
-    tip: "Time and date; outside temperature and conditions (Omarchy weather); volume (scroll to change, click to mute); Wi-Fi network. Icons: the system tray (click to open, middle click for the secondary action, right click for the menu)."
+    tip: "The Omarchy bar's widgets, the bar itself being hidden: clock, weather, world clocks, volume, network, Bluetooth, Tailscale, NordVPN, battery, agents, Prometheus, screens, keyboard layout, then the system tray. Click a cell to open that widget's panel; tray icons: click, middle click, right click for their menu."
   }
+
 
   // ------------------------------------------------------------- league
   HPanel {
