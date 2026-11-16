@@ -167,7 +167,7 @@ Item {
     property real radius: globe.radius / (globe.width / 2)
     property real dotStep: 2.0
     property real hasLand: mask.status === Image.Ready ? 1 : 0
-    property color dayColor: globe.pal.alpha(globe.pal.acc2, 0.85)
+    property color dayColor: globe.pal.alpha(globe.pal.acc, 0.85)
     property color nightColor: globe.pal.alpha(globe.pal.blue, 0.4)
     property color oceanColor: Qt.darker(globe.pal.bg, 1.15)
     property color gridColor: globe.pal.alpha(globe.pal.acc, 0.12)
