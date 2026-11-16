@@ -56,7 +56,23 @@ HPanel {
   // The current weather, from its WMO code (and day or night).
   function weatherGlyph(w) {
     if (!w) return g(0xF0590)
-    var c = w.wmoCode, day = w.isDay !== false
+    var h = new Date().getHours()
+    var day = w.isDay === null || w.isDay === undefined ? (h >= 7 && h < 19) : w.isDay !== false
+    // The weather plugin gives either a WMO code or a wttr.in one.
+    if ((w.wmoCode === null || w.wmoCode === undefined) && w.wttrCode !== null && w.wttrCode !== undefined) {
+      var t = w.wttrCode
+      if (t === 113) return day ? g(0xF0599) : g(0xF0594)
+      if (t === 116) return day ? g(0xF0595) : g(0xF0F31)
+      if (t === 119 || t === 122) return g(0xF0590)
+      if ([143, 248, 260].indexOf(t) >= 0) return g(0xF0591)
+      if ([200, 386, 389, 392, 395].indexOf(t) >= 0) return g(0xF0593)
+      if ([179, 182, 185, 281, 284, 311, 314, 317, 320, 350, 362, 365, 374, 377].indexOf(t) >= 0) return g(0xF067F)
+      if ([227, 230, 323, 326, 329, 332, 335, 338, 368, 371].indexOf(t) >= 0) return g(0xF0598)
+      if ([299, 302, 305, 308, 356, 359].indexOf(t) >= 0) return g(0xF0596)
+      return g(0xF0597)
+    }
+    var c = w.wmoCode
+    if (c === null || c === undefined) return g(0xF0590)
     if (c === 0) return day ? g(0xF0599) : g(0xF0594)            // clear
     if (c <= 2) return day ? g(0xF0595) : g(0xF0F31)             // partly cloudy
     if (c === 3) return g(0xF0590)                                // overcast
