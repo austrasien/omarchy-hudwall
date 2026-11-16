@@ -127,10 +127,13 @@ Item {
           text: "▤ TASKS " + block.openTasks.length + " · 🔒"
           color: block.pal.dim; font.pixelSize: 8; font.letterSpacing: 1
         }
-        HoverHandler { id: chipHover }
-        // A click opens the task list in Prometheus' panel.
+        // A click opens the task list in Prometheus' panel. The zone runs
+        // past the chip so its whole drawing answers the pointer.
         MouseArea {
+          id: chipArea
           anchors.fill: parent
+          anchors.margins: -10
+          hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
           onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", "tasks"])
         }
@@ -138,7 +141,7 @@ Item {
         // The list, above the chip, only while hovered (or typing).
         Rectangle {
           id: pop
-          visible: chipHover.hovered || popHover.hovered || field.activeFocus
+          visible: chipArea.containsMouse || popHover.hovered || field.activeFocus
           z: 30
           width: 330; height: popCol.implicitHeight + 20
           x: (chip.width - width) / 2

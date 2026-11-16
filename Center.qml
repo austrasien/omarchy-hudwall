@@ -52,10 +52,11 @@ Item {
     list.sort(function(a, b) { return b.seconds - a.seconds })
     return list
   }
-  readonly property var palette: [pal.acc, pal.blue, pal.mag, pal.cyan, pal.acc2, pal.red]
+  // The top apps take the series colors (told apart), the rest stay grey.
   readonly property var appColors: {
     var out = {}
-    for (var i = 0; i < apps.length && i < palette.length; i++) out[apps[i].app] = palette[i]
+    var n = pal.seriesColors.length
+    for (var i = 0; i < apps.length && i < n; i++) out[apps[i].app] = pal.series(i)
     return out
   }
 

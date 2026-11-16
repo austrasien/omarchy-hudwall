@@ -29,7 +29,7 @@ Item {
     pal: col.pal
     sys: col.sys
     width: col.width; height: 106
-    tip: "The Omarchy bar's widgets, the bar itself being hidden: clock, weather, world clocks, volume, network, Bluetooth, Tailscale, NordVPN, battery, agents, Prometheus, screens, CamGuard, Flux, keyboard layout, then the system tray. Click a cell to open that widget's panel, beside this widget; tray icons: click, middle click, right click for their menu."
+    tip: "The Omarchy bar's widgets, the bar itself being hidden: clock, weather, world clocks, volume, Bluetooth, Tailscale, NordVPN, agents, Prometheus, screens, CamGuard, Flux, then the system tray (network and battery: click their panels at the bottom). Click a cell to open that widget's panel, beside this widget; tray icons: click, middle click, right click for their menu."
   }
 
 
