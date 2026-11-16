@@ -10,7 +10,7 @@ Item {
   property bool active: false
   property var cfg: ({})
   property real devicePixelRatio: 1
-  readonly property bool wantsKeyboard: center.wantsKeyboard
+  readonly property bool wantsKeyboard: center.wantsKeyboard || bottomRow.wantsKeyboard
 
   readonly property real k: Math.min(width / 1440, height / 960)
   readonly property real pixelScale: k * devicePixelRatio
@@ -45,6 +45,8 @@ Item {
   readonly property bool lowPower: sys.bat.status === "Discharging" && sys.bat.pct !== undefined && sys.bat.pct <= 15
   Sys { id: sys; active: hud.active }
   Prom { id: prom; active: hud.active }
+  readonly property var promData: prom
+  readonly property var sysData: sys
 
   Rectangle {
     anchors.fill: parent
@@ -108,6 +110,7 @@ Item {
       pixelScale: hud.pixelScale
     }
     BottomRow {
+      id: bottomRow
       x: hud.mL; y: hud.bottomY
       width: hud.avail
       pal: theme; sys: sys; prom: prom

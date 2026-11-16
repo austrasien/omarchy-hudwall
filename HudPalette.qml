@@ -20,6 +20,45 @@ QtObject {
   property color mag: "#ff8fa3"
   property color red: "#ff5f4a"
 
+  // Colors for data series, from the theme's hues, each far enough from
+  // the others (CIE Lab distance) to be told apart: series(i) cycles them.
+  // The accent leads; a hue too close to one already picked is skipped
+  // (in Tokyo Night, accent and blue are the same color).
+  property var seriesColors: [acc, acc2, mag, cyan, red]
+  property real seriesMinDistance: 0
+  readonly property real minSeriesGap: 28
+  function series(i) { return seriesColors[((i % seriesColors.length) + seriesColors.length) % seriesColors.length] }
+
+  function lab(c) {
+    function lin(u) { return u <= 0.04045 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4) }
+    var r = lin(c.r), g = lin(c.g), b = lin(c.b)
+    var x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047
+    var y = (r * 0.2126 + g * 0.7152 + b * 0.0722)
+    var z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883
+    function f(t) { return t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116 }
+    return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))]
+  }
+  function distance(a, b) {
+    var p = lab(a), q = lab(b)
+    return Math.sqrt(Math.pow(p[0] - q[0], 2) + Math.pow(p[1] - q[1], 2) + Math.pow(p[2] - q[2], 2))
+  }
+  function buildSeries(v) {
+    var order = ["accent", "green", "magenta", "yellow", "cyan", "red", "orange", "blue",
+                 "bright_cyan", "bright_magenta", "bright_green", "bright_yellow", "bright_red", "bright_blue"]
+    var out = [], minGap = 1e9
+    for (var i = 0; i < order.length; i++) {
+      var hex = v[order[i]]
+      if (!hex) continue
+      var c = Qt.color(hex)
+      var near = 1e9
+      for (var k = 0; k < out.length; k++) near = Math.min(near, distance(c, out[k]))
+      if (out.length && near < minSeriesGap) continue
+      if (out.length) minGap = Math.min(minGap, near)
+      out.push(c)
+    }
+    if (out.length >= 2) { seriesColors = out; seriesMinDistance = minGap }
+  }
+
   function alpha(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
   // A color as a CSS string, for Canvas.
   function css(c, a) {
@@ -59,5 +98,6 @@ QtObject {
     if ((c = pick("blue"))) blue = c
     if ((c = pick("magenta"))) mag = c
     if ((c = pick("red"))) red = c
+    buildSeries(v)
   }
 }

@@ -12,6 +12,10 @@ Item {
   property string label: ""
   property string note: ""
   property string tab: ""
+  // Or any command: ["austraz.power", "toggle"] runs `omarchy-shell austraz.power toggle`.
+  property var action: null
+  property string actionLabel: ""
+  readonly property bool clickable: tab.length > 0 || !!action
   property string tip: ""          // what the panel shows, on hover
   property bool tipAbove: false
   property real pad: 12
@@ -23,7 +27,7 @@ Item {
     anchors.fill: parent
     color: panel.pal.alpha(panel.pal.bgLight, 0.38)
     border.width: 1
-    border.color: panel.pal.alpha(panel.pal.acc, panel.tab && hover.hovered ? 0.35 : 0.08)
+    border.color: panel.pal.alpha(panel.pal.acc, panel.clickable && hover.hovered ? 0.35 : 0.08)
     Behavior on border.color { ColorAnimation { duration: Style.duration(160) } }
   }
 
@@ -56,9 +60,15 @@ Item {
   }
 
   HoverHandler { id: hover }
-  TapHandler {
-    enabled: panel.tab.length > 0
-    onTapped: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", panel.tab])
+  // Under the content: a click on a legend or a button inside stays there.
+  MouseArea {
+    anchors.fill: parent
+    z: -1
+    enabled: panel.clickable
+    cursorShape: Qt.PointingHandCursor
+    onClicked: Quickshell.execDetached(panel.action
+      ? ["omarchy-shell"].concat(panel.action)
+      : ["omarchy-shell", "austraz.prometheus", "openTab", panel.tab])
   }
 
   Item {
@@ -70,12 +80,12 @@ Item {
   }
 
   HText {
-    visible: panel.tab.length > 0
+    visible: panel.clickable
     opacity: hover.hovered ? 0.85 : 0
     Behavior on opacity { NumberAnimation { duration: Style.duration(160) } }
     anchors.right: parent.right; anchors.rightMargin: 8
     anchors.bottom: parent.bottom; anchors.bottomMargin: 4
-    text: "↗ " + panel.tab.toUpperCase()
+    text: "↗ " + (panel.actionLabel || panel.tab).toUpperCase()
     color: panel.pal.acc
     font.pixelSize: 8
     font.letterSpacing: 1.5

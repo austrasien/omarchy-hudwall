@@ -20,10 +20,12 @@ Item {
   property var peers: ({ geo: false, list: [] })
   property var tail: ({})
   property var batDay: ({})
+  property var npuDay: null       // { t0, hours: [{ client: seconds }] x 24, requests }
 
   // Short histories for the sparklines (one sample a second).
   property var cpuHist: []
   property var gpuHist: []
+  property var gpuWattHist: []
   property var downHist: []
   property var upHist: []
   property var npuHist: []
@@ -46,6 +48,7 @@ Item {
     if (d.gpu) {
       gpu = d.gpu
       if (d.gpu.busy !== undefined) gpuHist = push(gpuHist, d.gpu.busy, 60)
+      if (d.gpu.watts !== undefined) gpuWattHist = push(gpuWattHist, d.gpu.watts, 60)
     }
     if (d.host) host = d.host
     if (d.mem) mem = d.mem
@@ -65,6 +68,7 @@ Item {
     if (d.peers) peers = d.peers
     if (d.tail) tail = d.tail
     if (d.batDay) batDay = d.batDay
+    if (d.npuDay) npuDay = d.npuDay
   }
 
   Process {
@@ -84,6 +88,16 @@ Item {
     if (n >= 1e9) return (n / 1e9).toFixed(1) + " G"
     if (n >= 1e6) return (n / 1e6).toFixed(0) + " M"
     return (n / 1e3).toFixed(0) + " k"
+  }
+  // A byte rate as bits per second, short: "1.2 Mbps", "85 Kbps".
+  function bits(n) {
+    if (n === undefined || n === null) return "–"
+    var b = n * 8
+    function short(v) { return v >= 100 ? Math.round(v) : v >= 10 ? v.toFixed(0) : v.toFixed(1) }
+    if (b >= 1e9) return short(b / 1e9) + " Gbps"
+    if (b >= 1e6) return short(b / 1e6) + " Mbps"
+    if (b >= 1e3) return short(b / 1e3) + " Kbps"
+    return Math.round(b) + " bps"
   }
   function rate(n) {
     if (n === undefined || n === null) return "–"

@@ -125,6 +125,12 @@ Item {
           color: block.pal.dim; font.pixelSize: 8; font.letterSpacing: 1
         }
         HoverHandler { id: chipHover }
+        // A click opens the task list in Prometheus' panel.
+        MouseArea {
+          anchors.fill: parent
+          cursorShape: Qt.PointingHandCursor
+          onClicked: Quickshell.execDetached(["omarchy-shell", "austraz.prometheus", "openTab", "tasks"])
+        }
 
         // The list, above the chip, only while hovered (or typing).
         Rectangle {

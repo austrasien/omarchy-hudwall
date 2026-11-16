@@ -348,6 +348,37 @@ def npu():
     return out
 
 
+def npu_day():
+    """The last 24 h of the NPU, hour by hour, from the npu-queue journal (it
+    logs each request: `done: <client> <priority> ran 9.2s`), so the history
+    survives shell restarts: busy seconds per client in each hour."""
+    now = time.time()
+    t0 = (int(now) // 3600 - 23) * 3600
+    hours = [{} for _ in range(24)]
+    count = 0
+    try:
+        r = subprocess.run(["journalctl", "--user", "-u", "npu-queue", "--since", f"@{t0}",
+                            "-o", "short-unix", "--no-pager", "-q"],
+                           capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    for line in r.stdout.splitlines():
+        m = re.match(r"^(\d+(?:\.\d+)?) \S+ \S+ done: (\S+) \S+ ran ([\d.]+)s", line)
+        if not m:
+            continue
+        end, client, ran = float(m.group(1)), m.group(2), float(m.group(3))
+        # Spread the run over the hours it covered.
+        start = end - ran
+        while ran > 0 and start < end:
+            h = int((start - t0) // 3600)
+            cut = min(end, t0 + (h + 1) * 3600)
+            if 0 <= h < 24:
+                hours[h][client] = round(hours[h].get(client, 0) + (cut - start), 1)
+            start = cut
+        count += 1
+    return {"t0": t0, "hours": hours, "requests": count}
+
+
 # ------------------------------------------------------- network peers
 
 class Geo:
@@ -544,6 +575,10 @@ def main():
             out["host"] = {"name": os.uname().nodename, "kernel": os.uname().release,
                            "uptime": int(float(up[0])) if up else 0}
             out["tail"] = tail.sample(cfg)
+        if tick % 60 == 0:
+            d = npu_day()
+            if d is not None:
+                out["npuDay"] = d
         if tick % 300 == 0 and bat_name:
             out["batDay"] = battery_day(bat_name)
         emit(out)

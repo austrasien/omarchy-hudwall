@@ -159,6 +159,14 @@ Item {
   IpcHandler {
     target: "austraz.hudwall"
     function preview(): string { root.previewOpen = !root.previewOpen; return root.previewOpen ? "open" : "closed" }
+    // For development: a Prometheus or system field as the HUD holds it,
+    // e.g. `dump prom.summary` or `dump sys.npu`.
+    function dump(path: string): string {
+      var parts = path.split(".")
+      var o = parts[0] === "sys" ? hud.sysData : hud.promData
+      for (var i = 1; i < parts.length && o !== undefined && o !== null; i++) o = o[parts[i]]
+      try { return JSON.stringify(o) } catch (e) { return String(o) }
+    }
     function status(): string {
       return JSON.stringify({ active: root.active, deskEmpty: root.deskEmpty, workspace: root.shownWorkspace, preview: root.previewOpen })
     }
