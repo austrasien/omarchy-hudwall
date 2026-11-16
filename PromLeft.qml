@@ -316,15 +316,15 @@ Item {
     Row {
       spacing: 14
       // This season's medal, as Prometheus draws it: the next one to win
-      // (one bar for the goal, two for the hard goal), dull until won;
-      // under the mouse it wakes up.
+      // (one bar for the goal, two for the hard goal), in its colours.
       Item {
         width: 62; height: 60
         PromUi.SeasonMedal {
           anchors.centerIn: parent
           readonly property int got: seasonPanel.s ? seasonPanel.s.bars || 0 : 0
           bars: got >= 1 ? 2 : 1
-          won: got >= 2
+          // Always in its colours: it is the medal to aim for.
+          won: true
           colors: seasonPanel.s ? seasonPanel.s.colors : null
           size: 2.2
         }
