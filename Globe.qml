@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import Quickshell
+import Quickshell.Widgets
 
 // The globe: the Earth itself is a shader (shaders/globe.frag) reading the
 // land mask written by bin/hudwall-fetch-data; on top, a light Canvas draws
@@ -59,6 +60,24 @@ Item {
     lon0 = (lon0 + turn(lon0, target) * Math.min(1, dt * 1.5) + 360) % 360
   }
   property var sunPos: sun()
+
+  // An app's icon from its process group name, through the desktop entries
+  // (as the launcher finds them); "" when there is none.
+  readonly property var iconNames: ({ "Brave": "brave-origin", "Claude": "claude-desktop", "Chromium": "chromium",
+                                      "Firefox": "firefox", "Obsidian": "obsidian" })
+  property var iconCache: ({})
+  function appIcon(proc) {
+    if (!proc) return ""
+    if (iconCache[proc] !== undefined) return iconCache[proc]
+    var name = iconNames[proc]
+    if (!name) {
+      var e = DesktopEntries.heuristicLookup(proc.toLowerCase())
+      name = e ? e.icon : ""
+    }
+    var path = name ? Quickshell.iconPath(name, true) : ""
+    iconCache[proc] = path || ""
+    return iconCache[proc]
+  }
 
   readonly property real cx: width / 2
   readonly property real cy: height / 2
@@ -198,6 +217,7 @@ Item {
       var pts = []
       for (var k = 0; k <= 32; k++) pts.push(slerp(home, dest, k / 32))
       out.push({ pts: pts, d: dist(home, dest), live: pe.live, own: !!pe.own, dest: dest,
+                 proc: pe.proc || "", place: pe.city || pe.country || "",
                  label: (pe.proc ? pe.proc + " · " : "") + (pe.city || pe.country || "") })
     }
     return out
@@ -264,12 +284,25 @@ Item {
         x: arc.f ? arc.f.end.x - 3 : 0; y: arc.f ? arc.f.end.y - 3 : 0
         width: 6; height: 6; radius: 3; color: arc.tint
       }
-      HText {
-        // Labels that would overlap an earlier one are left out.
+      // The label: the app's icon when it has one, then the place; the
+      // process name in words otherwise. Labels that would overlap an
+      // earlier one are left out.
+      Row {
         visible: !!(arc.f && arc.f.labelOn)
         x: arc.f ? arc.f.end.x + 6 : 0; y: arc.f ? arc.f.end.y - 14 : 0
-        text: arc.p ? arc.p.label : ""
-        color: arc.tint; font.pixelSize: 9
+        spacing: 3
+        readonly property string icon: arc.p ? globe.appIcon(arc.p.proc) : ""
+        IconImage {
+          visible: parent.icon.length > 0
+          anchors.verticalCenter: parent.verticalCenter
+          implicitSize: 12
+          source: parent.icon
+        }
+        HText {
+          anchors.verticalCenter: parent.verticalCenter
+          text: !arc.p ? "" : parent.icon.length > 0 || !arc.p.proc ? arc.p.place : arc.p.proc + " · " + arc.p.place
+          color: arc.tint; font.pixelSize: 9
+        }
       }
     }
   }

@@ -233,7 +233,7 @@ Item {
 
   // ------------------------------------------------------------ apps today
   Column {
-    x: 0; y: center.sessionY - 100; width: 140
+    x: 0; y: center.sessionY - 112; width: 140
     spacing: 2
     HText { text: "TODAY BY APP"; color: center.pal.acc; font.pixelSize: 8; font.letterSpacing: 2 }
     Repeater {
@@ -327,7 +327,7 @@ Item {
     }
   }
   Item {
-    x: 0; y: center.sessionY - 100; width: 140; height: 100
+    x: 0; y: center.sessionY - 112; width: 140; height: 100
     HoverTip {
       pal: center.pal; raiseTarget: center; above: true; tipWidth: 260
       text: "Time spent in each app today, as tracked by Prometheus. The colours match the 24-hour ring."
