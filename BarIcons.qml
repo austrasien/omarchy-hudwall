@@ -64,8 +64,8 @@ HPanel {
 
   // One cell per widget of the bar, in its order.
   readonly property var cells: [
-    { glyph: Qt.formatTime(now, "HH:mm"), text: true, value: Qt.locale("en_GB").toString(now, "ddd d"), target: "austraz.clock", tip: "clock" },
-    { glyph: weather ? Math.round(weather.tempC) + "°" : "–", text: true, value: "weather", target: "omarchy.weather" },
+    { glyph: Qt.formatTime(now, "HH:mm"), text: true, value: "", target: "austraz.clock", tip: "clock" },
+    { glyph: weather ? Math.round(weather.tempC) + "°" : "–", text: true, value: "", target: "omarchy.weather" },
     { glyph: g(0xF0EF2), value: "zones", target: "omarchy.elsewhen" },
     { glyph: muted ? g(0xF075F) : g(0xF057E), value: muted ? "mute" : Math.round(volume * 100) + "%", target: "omarchy.audio", on: !muted },
     { glyph: sys.net.ssid ? g(0xF05A9) : g(0xF05AA), value: sys.net.ssid ? "wi-fi" : "offline", target: "omarchy.network", on: !!sys.net.iface },
