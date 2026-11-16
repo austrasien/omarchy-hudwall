@@ -45,8 +45,17 @@ Item {
     for (var k = 0; k < ses.length; k++) add(f, ses[k].start, ses[k].end || Date.now())
     return { f: f, d: d }
   }
+  // Last week's day on the same weekday as a day still to come this week.
+  function lastWeekFor(day) {
+    var wd = new Date(day.date + "T12:00:00").getDay()
+    var lw = lastWeek ? lastWeek.days || [] : []
+    for (var i = 0; i < lw.length; i++) if (new Date(lw[i].date + "T12:00:00").getDay() === wd) return lw[i]
+    return null
+  }
   function loadWeekHours() {
-    var days = week ? week.days || [] : []
+    // This week's days so far, and for the days to come, last week's.
+    var days = (week ? week.days || [] : []).map(function(d) { return d.future ? prom.lastWeekFor(d) : d })
+      .filter(function(d) { return d && !d.future })
     var today = new Date(dayStart(0)).toDateString()
     // Forget the days of past weeks.
     var keep = {}, gone = false
@@ -140,6 +149,7 @@ Item {
     call("sessions:names", [], function(d) { prom.names = d })
     call("stats:days", [1], function(d) {
       prom.lastWeek = d
+      prom.loadWeekHours()
       // The day of the last two weeks with the most agent tokens, today aside.
       var days = (prom.week ? prom.week.days : []).concat(d.days || [])
       var best = null

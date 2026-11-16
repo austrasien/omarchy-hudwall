@@ -502,7 +502,7 @@ Item {
     pal: row.pal
     x: row.weekX; width: row.weekW; height: 176
     label: "Week · focus"
-    tip: "This week on one grid, weekday by hour of the day. Pale blocks: the usual, your sessions at that weekday and hour over the last 8 weeks (deeper = more); hours to come show only that. Bright blocks rising with the minutes: this week's time in session; the line underneath: time at the desk. Right: each day's totals (at desk, in session). Today's row is lit, the vertical line is now. Header: the week in session and its share of the desk time. Click a legend entry to hide it; click the panel: Stats tab."
+    tip: "This week on one grid, weekday by hour of the day. Pale blocks: the usual, your sessions at that weekday and hour over the last 8 weeks (deeper = more); hours to come show only that. Days still to come this week show last week's same day instead, faded: its totals in italics, its sessions as hollow blocks, its desk time dimmed. Bright blocks rising with the minutes: this week's time in session; the line underneath: time at the desk. Right: each day's totals (at desk, in session). Today's row is lit, the vertical line is now. Header: the week in session and its share of the desk time. Click a legend entry to hide it; click the panel: Stats tab."
     tipAbove: true
     tab: "stats"
     readonly property var days: row.prom.week ? row.prom.week.days || [] : []
@@ -573,7 +573,10 @@ Item {
           required property int index
           readonly property int wd: new Date(modelData.date + "T12:00:00").getDay()
           readonly property bool today: modelData.date === (row.prom.p ? row.prom.p.todayDate : "")
-          readonly property var hours: today ? row.prom.todayHours : row.prom.weekHours[modelData.date] || null
+          // A day still to come shows last week's same day, faded.
+          readonly property var lw: modelData.future ? row.prom.lastWeekFor(modelData) : null
+          readonly property var shownDay: lw || modelData
+          readonly property var hours: today ? row.prom.todayHours : row.prom.weekHours[shownDay.date] || null
           readonly property var usual: weekPanel.heat[wd] || []
           y: wd * grid.rowH; width: grid.width; height: grid.rowH
 
@@ -592,6 +595,7 @@ Item {
               readonly property real f: dayRow.hours ? dayRow.hours.f[index] : 0
               readonly property real d: dayRow.hours ? dayRow.hours.d[index] : 0
               readonly property bool past: !dayRow.modelData.future && (!dayRow.today || index <= weekPanel.nowHour)
+              readonly property bool lastWeek: !!dayRow.lw
               x: grid.cellsX + index * grid.cellW; width: grid.cellW; height: grid.rowH
               // The usual, pale (a dot when nothing usually happens).
               Rectangle {
@@ -609,39 +613,46 @@ Item {
               }
               // This week: in session, rising with the minutes.
               Rectangle {
-                visible: cell.past && cell.f >= 1 && weekLegend.on("focus")
+                visible: (cell.past || cell.lastWeek) && cell.f >= 1 && weekLegend.on("focus")
                 anchors.bottom: parent.bottom; anchors.bottomMargin: 2
                 x: 1; width: parent.width - 2
                 height: Math.max(2, (parent.height - 4) * Math.min(1, cell.f / 60))
                 radius: 1.5
-                color: row.pal.series(0)
+                // Last week's: hollow.
+                color: cell.lastWeek ? "transparent" : row.pal.series(0)
+                border.width: cell.lastWeek ? 1 : 0
+                border.color: row.pal.alpha(row.pal.series(0), 0.6)
               }
               // At the desk: a line underneath, brighter with the minutes.
               Rectangle {
-                visible: cell.past && cell.d >= 1 && weekLegend.on("tracked")
+                visible: (cell.past || cell.lastWeek) && cell.d >= 1 && weekLegend.on("tracked")
                 anchors.bottom: parent.bottom
                 x: 0.5; width: parent.width - 1; height: 1.5
                 color: row.pal.series(3)
-                opacity: 0.3 + 0.7 * Math.min(1, cell.d / 60)
+                opacity: (cell.lastWeek ? 0.35 : 1) * (0.3 + 0.7 * Math.min(1, cell.d / 60))
               }
             }
           }
           // The day's totals: at the desk, in session.
+          // (A day to come: last week's, faded and in italics.)
           Row {
             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-            visible: !dayRow.modelData.future
+            visible: !dayRow.modelData.future || !!dayRow.lw
+            opacity: dayRow.lw ? 0.5 : 1
             HText {
               width: 32; horizontalAlignment: Text.AlignRight
               visible: weekLegend.on("tracked")
-              text: weekPanel.hm2(dayRow.modelData.trackedSeconds)
+              text: weekPanel.hm2(dayRow.shownDay.trackedSeconds)
               color: row.pal.alpha(row.pal.series(3), 0.8); font.pixelSize: 9
+              font.italic: !!dayRow.lw
             }
             HText {
               width: 30; horizontalAlignment: Text.AlignRight
               visible: weekLegend.on("focus")
-              text: (dayRow.modelData.focusSeconds || 0) >= 60 ? weekPanel.hm2(dayRow.modelData.focusSeconds) : "–"
-              color: (dayRow.modelData.focusSeconds || 0) >= 60 ? row.pal.series(0) : row.pal.mut
+              text: (dayRow.shownDay.focusSeconds || 0) >= 60 ? weekPanel.hm2(dayRow.shownDay.focusSeconds) : "–"
+              color: (dayRow.shownDay.focusSeconds || 0) >= 60 ? row.pal.series(0) : row.pal.mut
               font.pixelSize: 9; font.weight: Font.DemiBold
+              font.italic: !!dayRow.lw
             }
           }
         }
