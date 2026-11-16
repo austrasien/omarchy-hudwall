@@ -11,6 +11,7 @@ Item {
   required property var pal
   property string label: ""
   property string note: ""
+  property color labelColor: pal.acc
   property string tab: ""
   // Or any command: ["austraz.power", "toggle"] runs `omarchy-shell austraz.power toggle`.
   property var action: null
@@ -47,7 +48,7 @@ Item {
     opacity: hover.hovered && hints.opacity > 0 && contentWidth + hints.implicitWidth + 12 > panel.width - 2 * panel.pad ? 0 : 0.9
     Behavior on opacity { NumberAnimation { duration: Style.duration(160) } }
     text: panel.label.toUpperCase()
-    color: panel.pal.acc
+    color: panel.labelColor
     font.pixelSize: 9
     font.letterSpacing: 2
   }

@@ -372,15 +372,30 @@ def http_json(url, timeout=0.6):
         return json.loads(r.read(200000))
 
 
+LAST_MODEL = os.path.expanduser("~/.local/state/hudwall/npu-last-model")
+
+
 def npu():
     out = {}
     try:
         h = http_json("http://127.0.0.1:13305/api/v1/health")
         models = h.get("all_models_loaded") or []
-        m = next((x for x in models if x.get("device") == "npu"), models[0] if models else None)
+        m = next((x for x in models if x.get("device") == "npu"), None)
+        # No model on the NPU: Lemonade is up but nothing can answer there.
+        out["loaded"] = m is not None
         if m:
             out["model"] = m.get("model_name") or m.get("checkpoint")
             out["busy"] = bool(m.get("is_busy") or m.get("is_streaming"))
+            # Kept on disk, to name the model once it is unloaded.
+            if read(LAST_MODEL).strip() != out["model"]:
+                try:
+                    os.makedirs(os.path.dirname(LAST_MODEL), exist_ok=True)
+                    with open(LAST_MODEL, "w") as f:
+                        f.write(out["model"] + "\n")
+                except OSError:
+                    pass
+        else:
+            out["lastModel"] = read(LAST_MODEL).strip() or None
         out["up"] = True
     except Exception:
         return {"up": False}

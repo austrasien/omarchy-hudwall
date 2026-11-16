@@ -301,13 +301,22 @@ Item {
     // read from the name ("35b-a3b": 35 billion parameters, 3 active per
     // token in a mixture of experts); Lemonade does not report it.
     readonly property var size: {
-      var m = /(\d+(?:\.\d+)?)b(?:-a(\d+(?:\.\d+)?)b)?/i.exec(col.sys.npu.model || "")
+      var m = /(\d+(?:\.\d+)?)b(?:-a(\d+(?:\.\d+)?)b)?/i.exec(npuPanel.model || "")
       return m ? { total: m[1], active: m[2] || "" } : null
     }
-    readonly property string shortName: (col.sys.npu.model || "Lemonade")
+    readonly property string shortName: (npuPanel.model || "Lemonade")
       .replace(/[-_]?\d+(?:\.\d+)?b(?:-a\d+(?:\.\d+)?b)?/i, "").replace(/-(FLM|GGUF|ONNX|OGA.*)$/i, "")
     label: "NPU · " + shortName + (size ? " · " + size.total + "B" : "")
-    note: col.sys.npu.up ? (col.sys.npu.busy ? "busy" : "ready") : "stopped"
+    // Unloaded, the title keeps the last model's name, greyed.
+    labelColor: loaded ? col.pal.acc : col.pal.mut
+    note: !col.sys.npu.up ? "stopped" : !loaded ? "unloaded" : col.sys.npu.busy ? "busy" : "ready"
+    readonly property bool loaded: !!col.sys.npu.up && col.sys.npu.loaded !== false
+    property string lastModel: ""
+    readonly property string model: col.sys.npu.model || lastModel || col.sys.npu.lastModel || ""
+    Connections {
+      target: col.sys
+      function onNpuChanged() { if (col.sys.npu.model) npuPanel.lastModel = col.sys.npu.model }
+    }
     tip: "The local LLM on the NPU (Lemonade), with its size read from its name (total parameters). Speed of the last generation and the request queue. Bars: the last 24 hours, busy time per hour by client (from the npu-queue journal, so it survives restarts); click a legend entry to hide a client. Peaks: busy minutes."
     readonly property var day: col.sys.npuDay
     readonly property var clients: {
@@ -331,7 +340,7 @@ Item {
       spacing: 6
       HText {
         anchors.bottom: parent.bottom
-        text: col.sys.npu.tps ? Math.round(col.sys.npu.tps) : "–"
+        text: npuPanel.loaded && col.sys.npu.tps ? Math.round(col.sys.npu.tps) : "–"
         color: col.pal.fg; font.pixelSize: 18; font.weight: Font.DemiBold
       }
       HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 2; text: "tok/s"; color: col.pal.mut; font.pixelSize: 9 }
