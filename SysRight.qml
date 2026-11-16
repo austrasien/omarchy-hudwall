@@ -207,7 +207,7 @@ Item {
     y: 480; width: col.width; height: 106
     label: "RAM"
     note: col.sys.mem.total ? Math.round(col.sys.mem.total / 1073741824) + " GB" : ""
-    tip: "RAM split: used by programs, page cache (freed when needed), compressed swap in zram, free. Click a legend entry to leave it out of the ring."
+    tip: "RAM split: used by programs, page cache (freed when needed), compressed swap in zram, free. Graph: the last minute of each, out of the whole RAM. Click a legend entry to leave it out of the ring and the graph."
     readonly property var parts: col.sys.mem.total ? [
       { key: "used", name: "used", v: col.sys.mem.used, color: col.pal.series(0) },
       { key: "cache", name: "cache", v: col.sys.mem.cache, color: col.pal.series(1) },
@@ -252,15 +252,42 @@ Item {
           color: col.pal.fg; font.pixelSize: 12; font.weight: Font.DemiBold
         }
       }
-      Legend {
-        id: memLegend
-        pal: col.pal
+      // Right of the ring: the parts (click to hide one) over their last
+      // minute, as on the GPU panel.
+      Item {
+        width: memPanel.width - 2 * memPanel.pad - 64 - 16; height: 64
         anchors.verticalCenter: parent.verticalCenter
-        width: memPanel.width - 2 * memPanel.pad - 64 - 16
-        columnWidth: width
-        spacing: 3
-        size: 9
-        items: memPanel.parts.map(function(p) { return { key: p.key, name: p.name, color: p.color, value: col.sys.bytes(p.v) } })
+        Legend {
+          id: memLegend
+          pal: col.pal
+          width: parent.width
+          spacing: 8
+          items: memPanel.parts.map(function(p) { return { key: p.key, name: p.name, color: p.color, value: col.sys.bytes(p.v) } })
+        }
+        Item {
+          anchors.bottom: parent.bottom
+          width: parent.width; height: 28
+          readonly property real total: col.sys.mem.total || 1
+          function gb(v) { return (v / 1073741824).toFixed(1) + " G" }
+          Spark {
+            visible: memLegend.on("cache")
+            anchors.fill: parent; fill: false; lineWidth: 1
+            values: col.sys.memCacheHist; max: parent.total; color: col.pal.series(1)
+            format: function(v) { return parent.gb(v) }
+          }
+          Spark {
+            visible: memLegend.on("zram")
+            anchors.fill: parent; fill: false; lineWidth: 1
+            values: col.sys.memZramHist; max: parent.total; color: col.pal.series(2)
+            format: function(v) { return parent.gb(v) }
+          }
+          Spark {
+            visible: memLegend.on("used")
+            anchors.fill: parent
+            values: col.sys.memUsedHist; max: parent.total; color: col.pal.series(0)
+            format: function(v) { return parent.gb(v) }
+          }
+        }
       }
     }
   }

@@ -26,6 +26,9 @@ Item {
   property var cpuHist: []
   property var gpuHist: []
   property var gpuWattHist: []
+  property var memUsedHist: []
+  property var memCacheHist: []
+  property var memZramHist: []
   property var downHist: []
   property var upHist: []
   property var npuHist: []
@@ -51,7 +54,12 @@ Item {
       if (d.gpu.watts !== undefined) gpuWattHist = push(gpuWattHist, d.gpu.watts, 60)
     }
     if (d.host) host = d.host
-    if (d.mem) mem = d.mem
+    if (d.mem) {
+      mem = d.mem
+      memUsedHist = push(memUsedHist, d.mem.used || 0, 60)
+      memCacheHist = push(memCacheHist, d.mem.cache || 0, 60)
+      memZramHist = push(memZramHist, d.mem.zram || 0, 60)
+    }
     if (d.net) {
       net = d.net
       if (d.net.down !== undefined) {

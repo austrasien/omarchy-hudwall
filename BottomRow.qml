@@ -201,9 +201,11 @@ Item {
     })
 
     Row {
+      width: parent.width
       spacing: 6
-      HText { text: Math.round(quality.share * 100); color: row.pal.fg; font.pixelSize: 20; font.weight: Font.DemiBold }
+      HText { id: shareText; text: Math.round(quality.share * 100); color: row.pal.fg; font.pixelSize: 20; font.weight: Font.DemiBold }
       HText {
+        width: parent.width - shareText.width - 6
         anchors.bottom: parent.bottom; anchors.bottomMargin: 3
         text: "% in session · " + (quality.sw !== null ? Math.round(quality.sw) : "–") + " switches/h"
         color: row.pal.mut; font.pixelSize: 9
@@ -298,11 +300,12 @@ Item {
       width: parent.width; height: 28
       Row {
         visible: !coffee.showButtons
+        width: parent.width
         spacing: 6
-        HText { text: coffee.now ? Math.round(coffee.now.inBody || 0) : "–"; color: row.pal.fg; font.pixelSize: 22; font.weight: Font.DemiBold }
+        HText { id: mgText; text: coffee.now ? Math.round(coffee.now.inBody || 0) : "–"; color: row.pal.fg; font.pixelSize: 22; font.weight: Font.DemiBold }
         HText {
           anchors.bottom: parent.bottom; anchors.bottomMargin: 4
-          width: 170
+          width: parent.width - mgText.width - 6
           text: "mg · " + (coffee.now && coffee.now.ideal && coffee.now.ideal.at ? "next best at " + row.clock(coffee.now.ideal.at) : (coffee.now && coffee.now.ideal ? coffee.now.ideal.reason : ""))
           color: row.pal.mut; font.pixelSize: 9
         }
@@ -342,7 +345,7 @@ Item {
     }
     HiCanvas {
       id: curve
-      y: 34; width: parent.width; height: 66
+      y: 32; width: parent.width; height: 50
       pixelScale: row.pixelScale
       property var cdata: coffee.cd
       onCdataChanged: requestPaint()
@@ -395,8 +398,9 @@ Item {
         return (v >= 0 ? "+" : "") + v + "%"
       }
       HText { text: "WITH COFFEE · " + (effect.st ? effect.st.daysCompared : "–") + " DAYS"; color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2 }
-      Row {
-        spacing: 10
+      Flow {
+        width: parent.width
+        spacing: 8
         Repeater {
           model: [
             { k: "tokens", n: "tokens", c: row.pal.series(1) },
