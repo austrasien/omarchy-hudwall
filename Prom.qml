@@ -34,6 +34,8 @@ Item {
   property var names: null         // sessions:names
   property var yesterday: null     // stats:timeline of yesterday, for the ghost race
   property var bestDay: null       // stats:timeline of the best day
+  property var hoursYesterday: null  // coffee:day of yesterday (tokens by hour)
+  property var hoursBest: null       // coffee:day of the recent day with the most tokens
 
   signal toast(string kind, string title, string text, string rarity)
 
@@ -99,7 +101,20 @@ Item {
     call("stats:extra", [], function(d) { prom.extra = d })
     call("stats:coffee", [], function(d) { prom.coffeeStats = d })
     call("sessions:names", [], function(d) { prom.names = d })
-    call("stats:days", [1], function(d) { prom.lastWeek = d })
+    call("stats:days", [1], function(d) {
+      prom.lastWeek = d
+      // The day of the last two weeks with the most agent tokens, today aside.
+      var days = (prom.week ? prom.week.days : []).concat(d.days || [])
+      var best = null
+      var today = new Date(dayStart(0)).toDateString()
+      for (var i = 0; i < days.length; i++) {
+        var x = days[i]
+        if (x.future || new Date(x.fromMs).toDateString() === today) continue
+        if (!best || (x.tokens || 0) > (best.tokens || 0)) best = x
+      }
+      if (best) call("coffee:day", [best.fromMs], function(h) { h.date = best.date; prom.hoursBest = h })
+    })
+    call("coffee:day", [dayStart(-1)], function(d) { prom.hoursYesterday = d })
     call("stats:timeline", [{ fromMs: dayStart(-1), toMs: dayStart(-1) + (Date.now() - dayStart(0)) }], function(d) { prom.yesterday = d })
     geek.running = true
   }

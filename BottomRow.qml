@@ -49,12 +49,23 @@ Item {
   }
 
   // ---------------------------------------------------------- ghost race
+  // Two races since the start of the day, on the same legend: time in focus
+  // sessions, and agent tokens; today against the record and yesterday.
+  function tokenRun(day, untilNow) {
+    if (!day || !day.hours) return []
+    var out = [0], acc = 0
+    var last = untilNow ? Math.min(day.hours.length, Math.floor((Date.now() - day.fromMs) / 3600000) + 1) : day.hours.length
+    for (var i = 0; i < last; i++) { acc += day.hours[i].tokens || 0; out.push(acc / 1e6) }
+    return out
+  }
+  function tokens(m) { return m >= 1000 ? (m / 1000).toFixed(1) + " G" : m >= 10 ? Math.round(m) + " M" : m.toFixed(1) + " M" }
+
   HPanel {
     id: ghost
     pal: row.pal
     width: row.pw; height: 176
     label: "Ghost race"
-    tip: "Focus time accumulated since the start of the day: today against your best day and yesterday at the same time (click a legend entry to hide a curve). Click the panel: Stats tab."
+    tip: "Two races since the start of the day: time in focus sessions, and agent tokens. Today against the record (best focus day; for tokens, the recent day with the most) and yesterday at the same time. Click a legend entry to hide a curve; peaks labelled. Click the panel: Stats tab."
     tipAbove: true
     note: "vs record"
     tab: "stats"
@@ -63,7 +74,12 @@ Item {
     readonly property var today: row.cumulative(row.prom.timeline, 72, nowFrac)
     readonly property var best: row.cumulative(row.prom.bestDay, 72)
     readonly property var yest: row.cumulative(row.prom.yesterday, 72, nowFrac)
-    readonly property real topV: Math.max(4, best.length ? best[best.length - 1] : 0, today.length ? today[today.length - 1] : 0) * 1.1
+    readonly property real topV: Math.max(4, best.length ? best[best.length - 1] : 0, today.length ? today[today.length - 1] : 0) * 1.15
+
+    readonly property var tToday: row.tokenRun(row.prom.coffeeDay, true)
+    readonly property var tBest: row.tokenRun(row.prom.hoursBest, false)
+    readonly property var tYest: row.tokenRun(row.prom.hoursYesterday, true)
+    readonly property real tTop: Math.max(1, Math.max.apply(null, tToday.concat(tBest, tYest, [0]))) * 1.15
 
     Legend {
       id: ghostLegend
@@ -75,17 +91,11 @@ Item {
         { key: "yest", name: "yesterday", color: row.pal.series(2) }
       ]
     }
+    // Focus.
+    HText { y: 16; text: "FOCUS · " + row.hm((ghost.today.length ? ghost.today[ghost.today.length - 1] : 0) * 3600); color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2 }
     Item {
-      y: 16
-      width: parent.width; height: 90
-      Repeater {
-        model: 9
-        Rectangle {
-          required property int index
-          x: parent.width * index / 9; width: 1; height: parent.height
-          color: row.pal.alpha(row.pal.fg, 0.05)
-        }
-      }
+      y: 28; width: parent.width; height: 40
+      Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: row.pal.alpha(row.pal.fg, 0.08) }
       Spark {
         visible: ghostLegend.on("best")
         anchors.fill: parent; fill: false
@@ -101,28 +111,45 @@ Item {
       Spark {
         visible: ghostLegend.on("today")
         width: parent.width * Math.max(1, ghost.today.length - 1) / 72; height: parent.height
-        values: ghost.today; max: ghost.topV; color: row.pal.series(0); lineWidth: 1.8
+        values: ghost.today; max: ghost.topV; color: row.pal.series(0); lineWidth: 1.6
         format: function(v) { return row.hm(v * 3600) }
       }
     }
-    HText {
-      y: 110; width: parent.width
-      readonly property real t: ghost.today.length ? ghost.today[ghost.today.length - 1] : 0
-      readonly property real b: ghost.best.length ? ghost.best[Math.min(ghost.best.length - 1, ghost.today.length - 1)] || 0 : 0
-      readonly property real y2: ghost.yest.length ? ghost.yest[ghost.yest.length - 1] : 0
-      text: "today " + row.hm(t * 3600) + " · " + (t >= b ? "+" : "−") + row.hm(Math.abs(t - b) * 3600) + " vs record · "
-        + (t >= y2 ? "+" : "−") + row.hm(Math.abs(t - y2) * 3600) + " vs yesterday"
-      color: row.pal.dim; font.pixelSize: 8
+    // Agents.
+    HText { y: 76; text: "AGENTS · " + row.tokens(ghost.tToday.length ? ghost.tToday[ghost.tToday.length - 1] : 0) + " tokens"; color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1.2 }
+    Item {
+      y: 88; width: parent.width; height: parent.height - 88
+      Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: row.pal.alpha(row.pal.fg, 0.08) }
+      Spark {
+        visible: ghostLegend.on("best")
+        anchors.fill: parent; fill: false
+        values: ghost.tBest; max: ghost.tTop; color: row.pal.series(1); lineWidth: 1
+        format: function(v) { return row.tokens(v) }
+      }
+      Spark {
+        visible: ghostLegend.on("yest")
+        width: parent.width * Math.max(1, ghost.tYest.length - 1) / 24; height: parent.height; fill: false
+        values: ghost.tYest; max: ghost.tTop; color: row.pal.series(2); lineWidth: 1
+        format: function(v) { return row.tokens(v) }
+      }
+      Spark {
+        visible: ghostLegend.on("today")
+        width: parent.width * Math.max(1, ghost.tToday.length - 1) / 24; height: parent.height
+        values: ghost.tToday; max: ghost.tTop; color: row.pal.series(0); lineWidth: 1.6
+        format: function(v) { return row.tokens(v) }
+      }
     }
   }
 
   // ------------------------------------------------------- focus quality
+  // How focused the day is (share in session, window switches), and what
+  // the day was spent on, hour by hour, stacked by app.
   HPanel {
     id: quality
     pal: row.pal
     x: row.px(1); width: row.pw; height: 176
     label: "Focus quality"
-    tip: "Share of today's tracked computer time spent in a focus session, window switches per hour, number of 2 h+ sessions and median session length. Graph: focus per hour today. Click: Stats tab."
+    tip: "Top: share of today's tracked computer time spent in a focus session, and window switches per hour. Bars: today's activity hour by hour, stacked by app (the top four, then the rest); click a legend entry to hide an app; peaks = active minutes. Click the panel: Stats tab."
     tipAbove: true
     note: "today"
     tab: "stats"
@@ -132,22 +159,112 @@ Item {
     readonly property var sw: row.prom.summary && row.prom.summary.switchesPerHour !== null && row.prom.summary.switchesPerHour !== undefined
       ? row.prom.summary.switchesPerHour : (row.prom.extra ? row.prom.extra.focus.switchesPerHour : null)
 
+    readonly property var tl: row.prom.timeline
+    // Seconds per app in each hour since the day start.
+    readonly property var perHour: {
+      var out = []
+      if (!tl || !tl.segments) return out
+      var from = tl.fromMs
+      var n = Math.min(24, Math.floor((Date.now() - from) / 3600000) + 1)
+      for (var h = 0; h < n; h++) out.push({})
+      for (var i = 0; i < tl.segments.length; i++) {
+        var g = tl.segments[i]
+        var a = g.start, b = g.end
+        while (a < b) {
+          var k = Math.floor((a - from) / 3600000)
+          var cut = Math.min(b, from + (k + 1) * 3600000)
+          if (k >= 0 && k < n) out[k][g.app] = (out[k][g.app] || 0) + (cut - a) / 1000
+          a = cut
+        }
+      }
+      return out
+    }
+    readonly property var topApps: {
+      var tot = {}
+      for (var h = 0; h < perHour.length; h++) for (var k in perHour[h]) tot[k] = (tot[k] || 0) + perHour[h][k]
+      var l = Object.keys(tot)
+      l.sort(function(a, b) { return tot[b] - tot[a] })
+      return l.slice(0, 4)
+    }
+    readonly property var groups: topApps.map(function(a, i) { return { key: a, name: a, color: row.pal.series(i) } })
+      .concat([{ key: "~other", name: "other", color: row.pal.alpha(row.pal.fg, 0.3) }])
+    function groupSecs(hour, key) {
+      if (key !== "~other") return hour[key] || 0
+      var s = 0
+      for (var k in hour) if (topApps.indexOf(k) < 0) s += hour[k]
+      return s
+    }
+    readonly property var totals: perHour.map(function(hr) {
+      var s = 0
+      for (var i = 0; i < quality.groups.length; i++) if (actLegend.on(quality.groups[i].key)) s += quality.groupSecs(hr, quality.groups[i].key)
+      return s
+    })
+
     Row {
       spacing: 6
-      HText { text: Math.round(quality.share * 100); color: row.pal.fg; font.pixelSize: 22; font.weight: Font.DemiBold }
-      HText { anchors.bottom: parent.bottom; anchors.bottomMargin: 4; text: "% of tracked time in session"; color: row.pal.mut; font.pixelSize: 9 }
+      HText { text: Math.round(quality.share * 100); color: row.pal.fg; font.pixelSize: 20; font.weight: Font.DemiBold }
+      HText {
+        anchors.bottom: parent.bottom; anchors.bottomMargin: 3
+        text: "% in session · " + (quality.sw !== null ? Math.round(quality.sw) : "–") + " switches/h"
+        color: row.pal.mut; font.pixelSize: 9
+      }
     }
-    HText {
-      y: 32; width: parent.width
-      text: "flow " + (quality.sw !== null ? Math.round(quality.sw) : "–") + " switches/h · 2 h+ sessions "
-        + (row.prom.summary ? row.prom.summary.deepSessions : 0) + " · median " + (row.prom.extra ? row.prom.extra.focus.medianMinutes : "–") + " min"
-      color: row.pal.dim; font.pixelSize: 9
+    Legend {
+      id: actLegend
+      y: 30
+      pal: row.pal
+      width: parent.width
+      spacing: 6
+      size: 7
+      items: quality.groups.map(function(g) { return { key: g.key, name: g.name.length > 12 ? g.name.slice(0, 11) + "…" : g.name, color: g.color } })
     }
-    Spark {
-      y: 52; width: parent.width; height: 70
-      values: row.prom.coffeeDay ? row.prom.coffeeDay.hours.map(function(h) { return h.focus || 0 }) : []
-      max: 3600; color: row.pal.series(1)
-      format: function(v) { return Math.round(v / 60) + "m" }
+    Item {
+      id: act
+      anchors.bottom: parent.bottom
+      width: parent.width; height: parent.height - 58
+      readonly property real bw: width / 24
+      Rectangle { anchors.bottom: parent.bottom; anchors.bottomMargin: 8; width: parent.width; height: 1; color: row.pal.alpha(row.pal.fg, 0.1) }
+      Repeater {
+        model: quality.perHour
+        Item {
+          id: hr
+          required property var modelData
+          required property int index
+          x: index * act.bw + 0.5; width: act.bw - 1; height: act.height - 8
+          Column {
+            anchors.bottom: parent.bottom
+            width: parent.width
+            Repeater {
+              model: quality.groups.slice().reverse()
+              Rectangle {
+                required property var modelData
+                width: hr.width
+                height: actLegend.on(modelData.key) ? hr.height * quality.groupSecs(hr.modelData, modelData.key) / 3600 : 0
+                color: modelData.color
+              }
+            }
+          }
+        }
+      }
+      Spark {
+        width: parent.width * quality.perHour.length / 24; height: parent.height - 8
+        centered: true; fill: false; lineWidth: 0
+        values: quality.totals; max: 3600; color: row.pal.fg
+        format: function(v) { return Math.round(v / 60) + "m" }
+      }
+      Repeater {
+        model: [0, 6, 12, 18]
+        HText {
+          required property var modelData
+          x: modelData * act.bw
+          anchors.bottom: parent.bottom; anchors.bottomMargin: -2
+          text: {
+            var d = new Date((quality.tl ? quality.tl.fromMs : 0) + modelData * 3600000)
+            return d.getHours() + "h"
+          }
+          color: row.pal.mut; font.pixelSize: 7
+        }
+      }
     }
   }
 
@@ -386,7 +503,7 @@ Item {
     pal: row.pal
     x: row.weekX; width: row.weekW; height: 176
     label: "Week · focus"
-    tip: "This week, day by day: time at the computer (tracked) and in focus sessions; the figure is the session time (or the tracked time when sessions are hidden). Grid, on the same rows: focus by weekday and hour over the last 8 weeks. Click a legend entry to hide it; click the panel: Stats tab."
+    tip: "Left, this week day by day: time at the desk (tracked activity) and time in focus sessions, as bars and figures in the legend's colours. Right, on the same weekday rows: time in focus sessions by hour of the day, added up over the last 8 weeks (darker = more; scale bottom right). Click a legend entry to hide it; click the panel: Stats tab."
     tipAbove: true
     tab: "stats"
     readonly property var days: row.prom.week ? row.prom.week.days || [] : []
@@ -401,14 +518,26 @@ Item {
     }
     readonly property real span: Math.max(3600, days.reduce(function(a, d) { return Math.max(a, d.trackedSeconds || 0) }, 0))
 
+    function hm2(s) {
+      var h = Math.floor((s || 0) / 3600), m = Math.floor((s || 0) % 3600 / 60)
+      return h > 0 ? h + "h" + String(m).padStart(2, "0") : m + "m"
+    }
+    // Left: this week; right: the last weeks, each with its own heading.
     Legend {
       id: weekLegend
       pal: weekPanel.pal
-      width: parent.width
+      width: grid.leftW
+      spacing: 6
+      size: 7
       items: [
-        { key: "tracked", name: "at the computer", color: row.pal.series(3) },
+        { key: "tracked", name: "at the desk", color: row.pal.series(3) },
         { key: "focus", name: "in session", color: row.pal.series(0) }
       ]
+    }
+    HText {
+      x: grid.gridX
+      text: "SESSIONS BY HOUR · LAST 8 WEEKS"
+      color: row.pal.mut; font.pixelSize: 7; font.letterSpacing: 1
     }
     // Seven rows shared by the days (left) and the weekday x hour grid of
     // the last weeks (right), so both read along the same line.
@@ -417,7 +546,7 @@ Item {
       y: 16
       width: parent.width; height: parent.height - 16 - 10
       readonly property real rowH: height / 7
-      readonly property real leftW: 112
+      readonly property real leftW: 138
       readonly property real gridX: leftW + 10
       readonly property real cellW: (width - gridX) / 24
 
@@ -436,7 +565,7 @@ Item {
             font.pixelSize: 8; font.weight: dayRow.today ? Font.DemiBold : Font.Normal
           }
           Item {
-            x: 12; width: parent.width - 12 - 30; height: Math.max(3, grid.rowH - 5)
+            x: 12; width: parent.width - 12 - 56; height: Math.max(3, grid.rowH - 5)
             anchors.verticalCenter: parent.verticalCenter
             Rectangle { anchors.fill: parent; color: row.pal.alpha(row.pal.fg, 0.04) }
             Rectangle {
@@ -451,15 +580,22 @@ Item {
               color: row.pal.series(0)
             }
           }
-          HText {
+          // The two figures, in their legend's colours: at the desk, in session.
+          Row {
             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
             visible: !dayRow.modelData.future
-            text: {
-              var s = weekLegend.on("focus") ? dayRow.modelData.focusSeconds : dayRow.modelData.trackedSeconds
-              var h = Math.floor((s || 0) / 3600), m = Math.floor((s || 0) % 3600 / 60)
-              return h > 0 ? h + "h" + String(m).padStart(2, "0") : m + "m"
+            HText {
+              width: 28; horizontalAlignment: Text.AlignRight
+              visible: weekLegend.on("tracked")
+              text: weekPanel.hm2(dayRow.modelData.trackedSeconds)
+              color: row.pal.series(3); font.pixelSize: 8
             }
-            color: dayRow.today ? row.pal.fg : row.pal.dim; font.pixelSize: 8
+            HText {
+              width: 26; horizontalAlignment: Text.AlignRight
+              visible: weekLegend.on("focus")
+              text: weekPanel.hm2(dayRow.modelData.focusSeconds)
+              color: row.pal.series(0); font.pixelSize: 8
+            }
           }
         }
       }
@@ -477,6 +613,23 @@ Item {
           opacity: v > 0 && weekLegend.on("focus") ? 0.2 + 0.8 * v / weekPanel.heatMax : 1
         }
       }
+    }
+    // The grid's scale, bottom right.
+    Row {
+      anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.bottomMargin: -2
+      spacing: 2
+      HText { text: "0"; color: row.pal.mut; font.pixelSize: 7 }
+      Repeater {
+        model: 5
+        Rectangle {
+          required property int index
+          anchors.verticalCenter: parent.verticalCenter
+          width: 6; height: 6
+          color: index === 0 ? row.pal.alpha(row.pal.fg, 0.06) : row.pal.series(0)
+          opacity: index === 0 ? 1 : 0.2 + 0.2 * index
+        }
+      }
+      HText { text: Math.round(weekPanel.heatMax / 60) + " h"; color: row.pal.mut; font.pixelSize: 7 }
     }
     // Hours under the grid.
     Repeater {

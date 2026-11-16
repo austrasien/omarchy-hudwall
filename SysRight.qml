@@ -200,8 +200,8 @@ Item {
   HPanel {
     id: memPanel
     pal: col.pal
-    y: 354; width: col.width; height: 106
-    label: "Memory"
+    y: 480; width: col.width; height: 106
+    label: "RAM"
     note: col.sys.mem.total ? Math.round(col.sys.mem.total / 1073741824) + " GB" : ""
     tip: "RAM split: used by programs, page cache (freed when needed), compressed swap in zram, free. Click a legend entry to leave it out of the ring."
     readonly property var parts: col.sys.mem.total ? [
@@ -265,7 +265,7 @@ Item {
   HPanel {
     id: npuPanel
     pal: col.pal
-    y: 470; width: col.width; height: 116
+    y: 354; width: col.width; height: 116
     label: "NPU · " + (col.sys.npu.model || "Lemonade")
     note: col.sys.npu.up ? (col.sys.npu.busy ? "busy" : "ready") : "stopped"
     tip: "The local LLM on the NPU (Lemonade). Speed of the last generation and the request queue. Bars: the last 24 hours, busy time per hour by client (from the npu-queue journal, so it survives restarts); click a legend entry to hide a client. Peaks: busy minutes."
