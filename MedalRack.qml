@@ -110,9 +110,14 @@ Item {
             color: "white"; font.pixelSize: 8; font.weight: Font.Bold
             style: Text.Outline; styleColor: "black"
           }
-          HoverHandler {
-            onHoveredChanged: {
-              if (hovered) {
+          // A MouseArea, not a HoverHandler: on the HUD's layer surface only
+          // MouseAreas get the pointer's hover reliably.
+          MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            onContainsMouseChanged: {
+              if (containsMouse) {
                 rack.hoveredMedal = rib.modelData
                 rack.hoveredAt = rib.mapToItem(rack, rib.width / 2, rib.height)
               } else if (rack.hoveredMedal === rib.modelData) rack.hoveredMedal = null
