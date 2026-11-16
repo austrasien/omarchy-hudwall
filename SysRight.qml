@@ -438,45 +438,46 @@ Item {
               color: col.pal.fg
             }
             HBar {
+              id: cpuBar
               pal: col.pal
               width: parent.width - 104 - 16 - 34 - 44 - 24; anchors.verticalCenter: parent.verticalCenter
               value: Math.min(1, appRow.modelData.cpu * 2.5)
             }
-            // The button's place, between the bar and the CPU column (its
-            // "end?" / "restart?" grows to the left, over the bar).
-            Item {
-              width: 16; height: parent.height
-              z: 2
-              Rectangle {
-                id: killBtn
-                readonly property bool restart: appRow.act && appRow.act.kind !== "kill"
-                readonly property color tone: restart ? col.pal.series(2) : col.pal.red
-                visible: !!appRow.act && (rowHover.hovered || appRow.asking)
-                anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                width: appRow.asking ? askText.implicitWidth + 12 : 16; height: 13; radius: 2
-                color: btnArea.containsMouse ? col.pal.alpha(tone, 0.35) : col.pal.alpha(col.pal.bg, 0.92)
-                border.color: tone; border.width: 1
-                HText {
-                  id: askText
-                  anchors.centerIn: parent
-                  text: appRow.asking ? (killBtn.restart ? "restart?" : "end?") : (killBtn.restart ? "↻" : "✕")
-                  color: killBtn.tone; font.pixelSize: 9; font.weight: Font.DemiBold
-                }
-                MouseArea {
-                  id: btnArea
-                  anchors.fill: parent; anchors.margins: -2
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: {
-                    if (!appRow.asking) { appRow.asking = true; askTimer.restart(); return }
-                    askTimer.stop(); appRow.asking = false
-                    appRow.run()
-                  }
-                }
+            // Room for the button, between the bar and the CPU column.
+            Item { width: 16; height: parent.height }
+            HText { id: cpuText; width: 34; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: Math.round(appRow.modelData.cpu * 100) + "%"; color: col.pal.dim; font.pixelSize: 9 }
+            HText { width: 44; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: col.sys.bytes(appRow.modelData.rss); color: col.pal.dim; font.pixelSize: 9 }
+          }
+          Rectangle {
+            id: killBtn
+            readonly property bool restart: appRow.act && appRow.act.kind !== "kill"
+            readonly property color tone: restart ? col.pal.series(2) : col.pal.red
+            visible: !!appRow.act && (rowHover.hovered || appRow.asking)
+            // Centred between the bar's end and where the CPU figure starts
+            // (it is right-aligned); "end?" / "restart?" grows to the left.
+            readonly property real mid: (cpuBar.x + cpuBar.width + cpuText.x + cpuText.width - cpuText.implicitWidth) / 2
+            x: mid + 8 - width
+            anchors.verticalCenter: parent.verticalCenter
+            width: appRow.asking ? askText.implicitWidth + 12 : 16; height: 13; radius: 2
+            color: btnArea.containsMouse ? col.pal.alpha(tone, 0.35) : col.pal.alpha(col.pal.bg, 0.92)
+            border.color: tone; border.width: 1
+            HText {
+              id: askText
+              anchors.centerIn: parent
+              text: appRow.asking ? (killBtn.restart ? "restart?" : "end?") : (killBtn.restart ? "↻" : "✕")
+              color: killBtn.tone; font.pixelSize: 9; font.weight: Font.DemiBold
+            }
+            MouseArea {
+              id: btnArea
+              anchors.fill: parent; anchors.margins: -2
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                if (!appRow.asking) { appRow.asking = true; askTimer.restart(); return }
+                askTimer.stop(); appRow.asking = false
+                appRow.run()
               }
             }
-            HText { width: 34; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: Math.round(appRow.modelData.cpu * 100) + "%"; color: col.pal.dim; font.pixelSize: 9 }
-            HText { width: 44; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: col.sys.bytes(appRow.modelData.rss); color: col.pal.dim; font.pixelSize: 9 }
           }
         }
       }
