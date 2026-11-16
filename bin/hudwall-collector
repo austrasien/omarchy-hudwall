@@ -633,6 +633,33 @@ class Tailnet:
 
 # ---------------------------------------------------------------- main
 
+def models():
+    """The CPU's and GPU's names, short: "Ryzen AI 5 340", "Radeon 840M".
+    An APU names its GPU in the CPU's name ("... w/ Radeon 840M"), more
+    precisely than the PCI database; otherwise lspci's bracketed name."""
+    cpu = ""
+    for line in read("/proc/cpuinfo").splitlines():
+        if line.startswith("model name"):
+            cpu = line.split(":", 1)[1].strip()
+            break
+    gpu = ""
+    if " w/ " in cpu:
+        cpu, gpu = cpu.split(" w/ ", 1)
+    else:
+        try:
+            r = subprocess.run(["lspci", "-mm"], capture_output=True, text=True, timeout=3)
+            for line in r.stdout.splitlines():
+                if re.search(r'"(VGA|Display|3D)', line):
+                    name = re.findall(r'"([^"]*)"', line)[2]
+                    m = re.search(r"\[([^\]]+)\]", name)
+                    gpu = m.group(1) if m else name
+                    break
+        except (OSError, subprocess.SubprocessError, IndexError):
+            pass
+    strip = lambda s: re.sub(r"^(AMD|Intel\(R\)|Intel|NVIDIA)\s+", "", re.sub(r"\s+(Processor|\d+-Core.*)$", "", s)).strip()
+    return {"cpu": strip(cpu), "gpu": strip(gpu)}
+
+
 def emit(obj):
     sys.stdout.write(json.dumps(obj, separators=(",", ":")) + "\n")
     sys.stdout.flush()
@@ -667,7 +694,7 @@ def main():
             cfg = config()
             up = read("/proc/uptime").split()
             out["host"] = {"name": os.uname().nodename, "kernel": os.uname().release,
-                           "uptime": int(float(up[0])) if up else 0}
+                           "uptime": int(float(up[0])) if up else 0, **models()}
             out["tail"] = tail.sample(cfg)
         if tick % 600 == 0 or (npu_dirty and now - npu_read >= 60):
             d = npu_day()

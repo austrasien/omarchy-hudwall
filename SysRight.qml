@@ -39,7 +39,8 @@ Item {
     id: cpuPanel
     pal: col.pal
     y: 116; width: col.width; height: 114
-    label: "CPU · " + (col.sys.cpu.threads ? col.sys.cpu.threads.length : "–") + " threads"
+    // The model's name (one bar per thread in the graph).
+    label: "CPU" + (col.sys.host.cpu ? " · " + col.sys.host.cpu : "")
     note: col.sys.cpu.temp ? col.sys.cpu.temp + " °C" : ""
     tip: "Dial: load of the whole machine, clock in the middle; inner ring: CPU temperature (out of 100 °C). Graph: load over the last minute, highest peaks labelled. Bars: each thread now (accent while a Prometheus session runs)."
     readonly property color c: col.inSession ? col.pal.series(1) : col.pal.series(0)
@@ -96,7 +97,7 @@ Item {
     id: gpuPanel
     pal: col.pal
     y: 240; width: col.width; height: 112
-    label: "GPU"
+    label: "GPU" + (col.sys.host.gpu ? " · " + col.sys.host.gpu : "")
     note: col.sys.gpu.temp ? col.sys.gpu.temp + " °C" : ""
     tip: "Integrated GPU (amdgpu). Dial: load, clock in the middle; inner ring: temperature. Graph: load and power over the last minute (click a legend entry to hide it). Bars: dedicated video memory (VRAM) and system memory it borrows (GTT)."
     readonly property var g: col.sys.gpu
