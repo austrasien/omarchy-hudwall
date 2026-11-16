@@ -104,7 +104,7 @@ Item {
   NumberAnimation { id: showFog; target: root; property: "reveal"; from: 0; to: 1; duration: 550; easing.type: Easing.InOutQuad }
   SequentialAnimation {
     id: hideFog
-    NumberAnimation { target: root; property: "reveal"; to: 0; duration: 320; easing.type: Easing.InCubic }
+    NumberAnimation { target: root; property: "reveal"; to: 0; duration: 550; easing.type: Easing.InOutQuad }
     ScriptAction { script: { root.overWindows = false; root.reveal = 1 } }
   }
   NumberAnimation on fogTime { running: root.reveal < 1; from: 0; to: 100; duration: 100000; loops: Animation.Infinite }
