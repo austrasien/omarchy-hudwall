@@ -128,6 +128,16 @@ Item {
     }
   }
 
+  // While the HUD shows, the hidden bar opens its widgets' panels beside the
+  // HUD's bar icons widget (see austraz.bar's hudDock).
+  readonly property string dockJson: active && hud.width > 0 ? JSON.stringify(hud.barDock) : ""
+  onDockJsonChanged: dockSync.restart()
+  Timer {
+    id: dockSync
+    interval: 200
+    onTriggered: Quickshell.execDetached(["omarchy-shell", "omarchy.bar", "hudDock", root.dockJson])
+  }
+
   // A window with the same HUD, to look at it without emptying a desk.
   FloatingWindow {
     id: preview

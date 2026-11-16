@@ -75,6 +75,8 @@ HPanel {
     { glyph: g(0xF06A9), value: "agents", target: "omarchy.agents" },
     { glyph: g(0xF0238), value: "focus", target: "austraz.prometheus", fn: "openTab", args: ["session"] },
     { glyph: g(0xF0379), value: "screens", target: "im0001gt.screens" },
+    { glyph: g(0xF0100), value: "camguard", target: "austraz.camguard" },
+    { glyph: g(0xF011C), value: "flux", target: "shell", fn: "toggle", args: ["flux", "{}"] },
     { glyph: g(0xF030C), value: layout || "kbd", target: "" }
   ]
 
@@ -86,7 +88,7 @@ HPanel {
       Item {
         id: cell
         required property var modelData
-        width: modelData.text ? 36 : 26; height: 30
+        width: modelData.text ? 36 : 26; height: 26
         Rectangle {
           anchors.fill: parent
           radius: 3
@@ -123,7 +125,7 @@ HPanel {
       Item {
         id: trayItem
         required property var modelData
-        width: 26; height: 30
+        width: 26; height: 26
         IconImage { anchors.centerIn: parent; implicitSize: 16; source: trayItem.modelData.icon }
         MouseArea {
           anchors.fill: parent

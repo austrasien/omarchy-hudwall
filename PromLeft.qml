@@ -28,8 +28,8 @@ Item {
   BarIcons {
     pal: col.pal
     sys: col.sys
-    width: col.width; height: 80
-    tip: "The Omarchy bar's widgets, the bar itself being hidden: clock, weather, world clocks, volume, network, Bluetooth, Tailscale, NordVPN, battery, agents, Prometheus, screens, keyboard layout, then the system tray. Click a cell to open that widget's panel; tray icons: click, middle click, right click for their menu."
+    width: col.width; height: 106
+    tip: "The Omarchy bar's widgets, the bar itself being hidden: clock, weather, world clocks, volume, network, Bluetooth, Tailscale, NordVPN, battery, agents, Prometheus, screens, CamGuard, Flux, keyboard layout, then the system tray. Click a cell to open that widget's panel, beside this widget; tray icons: click, middle click, right click for their menu."
   }
 
 
@@ -37,7 +37,7 @@ Item {
   HPanel {
     id: leaguePanel
     pal: col.pal
-    y: 90; width: col.width; height: 200
+    y: 116; width: col.width; height: 186
     label: "League"
     tip: "Weekly league race against 9 historical rivals. Dots: each player's XP this week (you in white, cyan = promotion zone, red = relegation zone). At week end the top ranks move up a league, the bottom ones down. Bars: your XP per day this week, stacked by source. Click: Leagues tab."
     note: col.prom.league ? col.prom.league.daysLeft + " days left" : ""
@@ -201,14 +201,14 @@ Item {
 
     // XP of the week, by source, a stacked bar a day.
     Row {
-      y: 122
+      y: 116
       spacing: 12
       Repeater {
         model: col.prom.extra ? col.prom.extra.xpSources : []
         Item {
           id: day
           required property var modelData
-          width: 30; height: 30
+          width: 30; height: 26
           readonly property var parts: [
             { v: modelData.focus || 0, c: col.pal.acc },
             { v: modelData.tasks || 0, c: col.pal.acc2 },
@@ -232,7 +232,7 @@ Item {
               model: day.parts.slice().reverse()
               Rectangle {
                 required property var modelData
-                width: 30; height: modelData.v / day.maxDay * 24
+                width: 30; height: modelData.v / day.maxDay * 20
                 color: modelData.c; opacity: 0.85
               }
             }
@@ -252,7 +252,7 @@ Item {
   HPanel {
     id: seasonPanel
     pal: col.pal
-    y: 300; width: col.width; height: 110
+    y: 312; width: col.width; height: 104
     readonly property var s: col.prom.season
     label: s ? "Season " + s.number + " · " + s.label : "Season"
     note: s ? Math.max(0, Math.ceil((new Date(s.end + "T23:59:59") - Date.now()) / 86400000)) + " days left" : ""
@@ -325,7 +325,7 @@ Item {
   HPanel {
     id: boardsPanel
     pal: col.pal
-    y: 420; width: col.width; height: 112
+    y: 426; width: col.width; height: 106
     label: "Leaderboards"
     tip: "Your current score against your all-time best on each board (cyan tick = the record). Bottom: today's rank among all your days. Click: Leaderboards tab."
     note: "now / record"

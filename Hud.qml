@@ -30,6 +30,9 @@ Item {
   readonly property real colW: Math.max(270, Math.min(300, avail * 0.21))
   readonly property real centerX: mL + colW + gap
   readonly property real centerW: avail - 2 * colW - 2 * gap
+  // The bar icons widget, top left, in screen pixels: the hidden bar opens
+  // its panels to the right of it, top-aligned.
+  readonly property var barDock: ({ right: Math.round(x + (mL + colW) * k), top: Math.round(y + edge * k) })
   readonly property real bottomY: stageH - edge - 176
   // Where the globe ends up, in stage units.
   readonly property real globeX: centerX + center.gx
