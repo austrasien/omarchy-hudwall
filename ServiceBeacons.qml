@@ -94,6 +94,9 @@ Item {
       readonly property color tint: beacons.tint(modelData)
       readonly property bool down: modelData.state === "down"
       readonly property bool grey: ["up", "slow", "down"].indexOf(modelData.state) < 0
+      // Answering: dark, the colour of the rings' idle arcs (Rings.qml), so
+      // only what goes wrong stands out.
+      readonly property bool calm: modelData.state === "up"
       readonly property bool hot: beacons.hoveredIndex === index
 
       x: beacons.cx + beacons.radius * Math.cos(ang) - width / 2
@@ -120,15 +123,15 @@ Item {
         width: beacon.hot ? 18 : 14; height: width; radius: width / 2
         color: "transparent"
         border.width: 1
-        border.color: beacons.pal.alpha(beacon.tint, beacon.hot ? 0.9 : beacon.grey ? 0 : 0.28)
+        border.color: beacons.pal.alpha(beacon.tint, beacon.hot ? 0.9 : beacon.grey || beacon.calm ? 0 : 0.28)
         Behavior on width { NumberAnimation { duration: beacons.dur(140) } }
       }
       Rectangle {
         anchors.centerIn: parent
         width: 8; height: 8; radius: 4
-        color: beacon.grey ? "transparent" : beacon.tint
-        border.width: beacon.grey ? 1.2 : 0
-        border.color: beacon.tint
+        color: beacon.grey ? "transparent" : beacon.calm ? beacons.pal.alpha(beacons.pal.acc, 0.1) : beacon.tint
+        border.width: beacon.grey || beacon.calm ? 1.2 : 0
+        border.color: beacon.calm ? beacons.pal.alpha(beacons.pal.acc, beacon.hot ? 0.9 : 0.22) : beacon.tint
       }
 
       HoverHandler {

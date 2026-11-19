@@ -90,7 +90,7 @@ is a grey ring (`NO WATCHER`): nothing is known, which is not an outage.
 
 The beacons sit on the arc over the globe, just outside the months, from
 west-south-west to east-south-east. A service that answers is a plain dot
-in the HUD's accent (the colour of the panels' titles); amber: slow, or a
+dark, the colour of the rings' idle arcs (only what goes wrong stands out); amber: slow, or a
 certificate expiring within 14 days; red, with the two rings of a ping: down.
 A hollow grey ring: the watcher cannot tell (`NO LINK`, `NO TAILNET`) or cannot
 be read. Hovering a beacon locks a data card onto it, the day tape's way
