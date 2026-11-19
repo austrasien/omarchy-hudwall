@@ -15,6 +15,8 @@ shell on the Bottom layer: above the wallpaper, under every window.
   (focus and agent tokens), today against yesterday, the week. Its messages
   (medals, achievements, "Still there?", coffee) come down from the top of
   the screen over every window, in a notch.
+- **Services**: an annunciator panel under the medal rack, one lamp per
+  service you list (`uptime`), with a master caution light. See below.
 - **System**: CPU, GPU, the NPU (Lemonade) over 24 h, RAM, applications,
   network and Tailscale peers, battery with the day from UPower.
 - **The bar's icons**, top right, while the Omarchy bar stays hidden: with
@@ -57,7 +59,42 @@ keeps stale sibling components.
 | `mark` | none | `{ "image": "~/path/logo.png", "name": "ACME" }`: the mark at the top of the right column (the host name without it) |
 | `fps` | `24` | globe frame rate while seen (5–60) |
 | `pingPeers` | first 3 online | Tailscale host names to ping for latency |
+| `uptime` | `[]` | services to watch: the annunciator panel (below) |
 | `places` | `{}` | named points always on the globe, `{ "server": [lon, lat] }`, lit when Tailscale sees that host |
+
+## Services (annunciator panel)
+
+```json
+"uptime": [
+  { "name": "API", "url": "https://api.example.com", "note": "production" },
+  { "name": "SITE", "url": "https://example.com", "slow": 3000 },
+  { "name": "NAS", "tcp": "192.0.2.10:22", "every": 60, "open": "xdg-terminal-exec ssh nas" }
+]
+```
+
+A `url` is up when it answers below status 500 (a redirect or a 404 is an
+answer), and its certificate's expiry is read on the way. A `tcp` target is a
+bare connect, closed at once. `every`: seconds between checks (30 for a URL,
+300 for a TCP port, as repeated connects to SSH can look like a scan to
+fail2ban); `slow`: ms above which the lamp turns amber (1500); `open`: what a
+click opens (the URL by default, or a command line); `note`: shown in the
+details. Names are best kept short (seven letters).
+
+The panel follows the "dark cockpit": a service that answers stays dark,
+with a faint status line and its latency. Amber: slow, or a certificate
+expiring within 14 days. Red: failed twice in a row (a first failure is
+checked again 10 s later). The master light then flashes until clicked
+(acknowledged until that fault changes); with nothing to acknowledge, a
+click is a lamp test, every lamp lit a moment while every service is
+checked again. Grey is not an outage: `NO LINK` when this machine cannot
+reach the Internet either (a connect to 1.1.1.1:443 fails too), `OFF` for a
+Tailscale address while Tailscale is not running. Right click: target,
+state and since when, latency, HTTP status, certificate, last check.
+
+The checks run in a thread of the collector, so only while the HUD is
+seen; the last states are kept in `~/.local/state/hudwall/uptime.json`,
+shown at once next time (touch `uptime.poke` there to check everything
+again).
 
 ## IPC
 
@@ -122,6 +159,7 @@ On battery at 15 % or less, the HUD stops moving.
 | `Hud.qml` | the 1440 × 960 stage, scaled to the screen |
 | `Prom.qml`, `Sys.qml` | data: Prometheus calls, `bin/hudwall-collector` |
 | `PromLeft.qml`, `SysRight.qml`, `BottomRow.qml`, `Center.qml` | the four areas |
+| `Annunciator.qml` | the services' lamps and master caution light |
 | `Globe.qml`, `Rings.qml`, `MedalRack.qml`, `SessionBlock.qml`, `Announcement.qml` | centre pieces |
 | `HPanel`, `HText`, `HBar`, `HButton`, `Spark`, `HiCanvas`, `HudPalette` | building blocks |
 | `bin/hudwall-collector` | system readings, one JSON line a second (stdlib Python) |

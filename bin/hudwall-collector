@@ -8,8 +8,9 @@ the NPU every 2 s, processes every 3 s, the battery and network peers every
 NPU's 24 h history is read again from the journal only when the NPU served
 requests since the last read (or every 10 min, as the hours roll).
 
-Stdlib only. Nothing goes on the network but loopback calls to Lemonade
-and pings to the Tailscale peers named in the config.
+Stdlib only. Nothing goes on the network but loopback calls to Lemonade,
+pings to the Tailscale peers named in the config, and the uptime checks of
+the services listed in it (`uptime`, from a thread of their own).
 """
 
 import ipaddress
@@ -631,6 +632,199 @@ class Tailnet:
         return {"up": d.get("BackendState") == "Running", "relay": (d.get("Self") or {}).get("Relay", ""), "peers": peers[:6]}
 
 
+# --------------------------------------------------------------- uptime
+
+class Uptime:
+    """Watches the services listed under `uptime` in the config, from a
+    thread so that slow or dead targets never hold the 1 Hz loop back.
+
+    A target is { "name", "url" } (HTTPS or HTTP: up below status 500, with
+    the certificate's expiry) or { "name", "tcp": "host:port" } (a bare
+    connect, closed at once). Optional: "every" (seconds, default 30 for a
+    URL, 300 for a TCP port, as a TCP probe on SSH can look like a scan),
+    "slow" (ms, default 1500), "note", "open" (what a click on the tile
+    opens, a URL or a command line).
+
+    States: up, slow (answers, but slowly or with a certificate expiring
+    within 14 days), down (failed twice in a row), wait (not checked yet),
+    nolink (this machine has no Internet: the reference connect fails too)
+    and off (a Tailscale address while Tailscale is not running). Neither
+    nolink nor off counts as an outage. The last state and since when it
+    holds are kept in ~/.local/state/hudwall/uptime.json, so the HUD shows
+    them at once; touching uptime.poke there checks everything again now.
+    """
+    PATH = os.path.join(STATE, "uptime.json")
+    POKE = os.path.join(STATE, "uptime.poke")
+    REFERENCE = ("1.1.1.1", 443)
+
+    def __init__(self):
+        import threading
+        self.lock = threading.Lock()
+        self.targets = []
+        self.state = {}      # name -> {state, since, ms, code, cert, err, checked, fails}
+        self.version = 0
+        self.poke_seen = self._poke_time()
+        try:
+            with open(self.PATH) as f:
+                old = json.load(f).get("targets", {})
+            for name, s in old.items():
+                self.state[name] = {"state": s.get("state", "wait"), "since": s.get("since"), "checked": s.get("checked"),
+                                    "ms": s.get("ms"), "code": s.get("code"), "cert": s.get("cert"), "err": s.get("err"), "fails": 0}
+        except (OSError, ValueError, AttributeError):
+            pass
+        self.due = {}
+        threading.Thread(target=self.run, daemon=True).start()
+
+    def _poke_time(self):
+        try:
+            return os.stat(self.POKE).st_mtime
+        except OSError:
+            return 0
+
+    def configure(self, cfg):
+        raw = cfg.get("uptime")
+        targets = []
+        for t in raw if isinstance(raw, list) else []:
+            if isinstance(t, dict) and t.get("name") and (t.get("url") or t.get("tcp")):
+                targets.append(t)
+        with self.lock:
+            self.targets = targets
+
+    @staticmethod
+    def tcp(host, port, timeout=4):
+        import socket
+        t = time.time()
+        s = socket.create_connection((host, int(port)), timeout)
+        s.close()
+        return round((time.time() - t) * 1000)
+
+    @staticmethod
+    def https(url, timeout=6):
+        import http.client
+        import ssl
+        import urllib.parse
+        u = urllib.parse.urlsplit(url)
+        t = time.time()
+        if u.scheme == "https":
+            conn = http.client.HTTPSConnection(u.hostname, u.port or 443, timeout=timeout, context=ssl.create_default_context())
+        else:
+            conn = http.client.HTTPConnection(u.hostname, u.port or 80, timeout=timeout)
+        try:
+            conn.request("GET", (u.path or "/") + ("?" + u.query if u.query else ""), headers={"User-Agent": "hudwall-uptime"})
+            r = conn.getresponse()
+            ms = round((time.time() - t) * 1000)
+            cert = None
+            if u.scheme == "https" and conn.sock:
+                after = (conn.sock.getpeercert() or {}).get("notAfter")
+                if after:
+                    cert = int((ssl.cert_time_to_seconds(after) - time.time()) // 86400)
+            return r.status, ms, cert
+        finally:
+            conn.close()
+
+    @staticmethod
+    def tailnet_up():
+        try:
+            r = subprocess.run(["tailscale", "status", "--json"], capture_output=True, text=True, timeout=4)
+            return json.loads(r.stdout).get("BackendState") == "Running"
+        except (OSError, subprocess.SubprocessError, ValueError):
+            return False
+
+    def check(self, t):
+        """(state, ms, code, cert, err) for one target."""
+        slow = t.get("slow", 1500)
+        try:
+            if t.get("url"):
+                code, ms, cert = self.https(t["url"])
+                if code >= 500:
+                    return "down", ms, code, cert, "HTTP %d" % code
+                if ms > slow or (cert is not None and cert < 14):
+                    return "slow", ms, code, cert, None
+                return "up", ms, code, cert, None
+            host, _, port = t["tcp"].rpartition(":")
+            ms = self.tcp(host, port)
+            return ("slow" if ms > slow else "up"), ms, None, None, None
+        except Exception as e:          # noqa: BLE001 - any failure is the answer
+            msg = str(getattr(e, "reason", "") or e) or type(e).__name__
+            return "down", None, None, None, msg[:60]
+
+    def run(self):
+        while True:
+            now = time.time()
+            with self.lock:
+                targets = list(self.targets)
+            poke = self._poke_time()
+            if poke != self.poke_seen:
+                self.poke_seen = poke
+                self.due = {}
+            todo = [t for t in targets if self.due.get(t["name"], 0) <= now]
+            if todo:
+                link, tail = None, None
+                for t in todo:
+                    every = t.get("every", 30 if t.get("url") else 300)
+                    self.due[t["name"]] = now + every
+                    host = (t.get("tcp") or "").rpartition(":")[0]
+                    is_tail = host.startswith("100.") or host.endswith(".ts.net") or ".ts.net" in (t.get("url") or "")
+                    state, ms, code, cert, err = self.check(t)
+                    if state == "down":
+                        if is_tail:
+                            tail = self.tailnet_up() if tail is None else tail
+                            if not tail:
+                                state, err = "off", "Tailscale is not running"
+                        if state == "down":
+                            if link is None:
+                                try:
+                                    self.tcp(*self.REFERENCE, timeout=3)
+                                    link = True
+                                except OSError:
+                                    link = False
+                            if not link:
+                                state, err = "nolink", "no Internet from this machine"
+                    self.record(t["name"], state, ms, code, cert, err)
+                    if state == "down" and self.state[t["name"]]["state"] != "down":
+                        self.due[t["name"]] = time.time() + 10      # confirm soon
+            time.sleep(1)
+
+    def record(self, name, state, ms, code, cert, err):
+        now = round(time.time())
+        with self.lock:
+            s = self.state.setdefault(name, {"state": "wait", "since": now, "fails": 0})
+            # One failure is a doubt: the tile keeps its state until the next.
+            if state == "down":
+                s["fails"] = s.get("fails", 0) + 1
+                if s["fails"] < 2 and s["state"] not in ("wait", "down"):
+                    state = s["state"]
+            else:
+                s["fails"] = 0
+            if s["state"] != state:
+                s["state"], s["since"] = state, now
+            s.update({"ms": ms, "code": code, "cert": cert if cert is not None else s.get("cert"), "err": err, "checked": now})
+            self.version += 1
+        self.save()
+
+    def save(self):
+        with self.lock:
+            out = {"t": round(time.time()), "targets": {k: {x: v[x] for x in v if x != "fails"} for k, v in self.state.items()}}
+        try:
+            os.makedirs(STATE, exist_ok=True)
+            tmp = self.PATH + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(out, f)
+            os.replace(tmp, self.PATH)
+        except OSError:
+            pass
+
+    def sample(self):
+        with self.lock:
+            out = []
+            for t in self.targets:
+                s = self.state.get(t["name"], {"state": "wait"})
+                out.append({"name": t["name"], "target": t.get("url") or t.get("tcp"), "note": t.get("note", ""),
+                            "open": t.get("open", t.get("url", "")),
+                            **{k: s.get(k) for k in ("state", "since", "ms", "code", "cert", "err", "checked")}})
+            return self.version, out
+
+
 # ---------------------------------------------------------------- main
 
 def models():
@@ -668,6 +862,9 @@ def emit(obj):
 def main():
     cpu, net, procs, peers, tail = Cpu(), Net(), Procs(), Peers(), Tailnet()
     cfg = config()
+    uptime = Uptime()
+    uptime.configure(cfg)
+    uptime_sent = -1
     tick = 0
     bat_name = None
     npu_served, npu_dirty, npu_read = None, False, 0.0
@@ -692,6 +889,7 @@ def main():
                 out["peers"] = p
         if tick % 30 == 0:
             cfg = config()
+            uptime.configure(cfg)
             up = read("/proc/uptime").split()
             out["host"] = {"name": os.uname().nodename, "kernel": os.uname().release,
                            "uptime": int(float(up[0])) if up else 0, **models()}
@@ -701,6 +899,10 @@ def main():
             npu_read, npu_dirty = now, False
             if d is not None:
                 out["npuDay"] = d
+        version, targets = uptime.sample()
+        if version != uptime_sent or tick % 30 == 0:
+            uptime_sent = version
+            out["uptime"] = targets
         if tick % 300 == 0 and bat_name:
             out["batDay"] = battery_day(bat_name)
         emit(out)

@@ -175,6 +175,11 @@ Item {
         medals: center.p ? center.p.medals : []
         seasonMedals: center.p ? center.p.seasonMedals : []
       }
+      Annunciator {
+        width: parent.width
+        pal: center.pal; sys: center.sys
+        animate: center.animate
+      }
   }
 
   // ------------------------------------------------------------ rings & globe

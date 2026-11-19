@@ -19,6 +19,8 @@ QtObject {
   property color blue: "#8fb8de"
   property color mag: "#ff8fa3"
   property color red: "#ff5f4a"
+  // Caution (the annunciators' amber).
+  property color yellow: "#ffcc4d"
 
   // Colors for data series, from the theme's hues, each far enough from
   // the others (CIE Lab distance) to be told apart: series(i) cycles them.
@@ -101,6 +103,7 @@ QtObject {
     if ((c = pick("blue"))) blue = c
     if ((c = pick("magenta"))) mag = c
     if ((c = pick("red"))) red = c
+    if ((c = pick("yellow", "bright_yellow"))) yellow = c
     buildSeries(v)
   }
 }

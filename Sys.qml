@@ -21,6 +21,7 @@ Item {
   property var tail: ({})
   property var batDay: ({})
   property var npuDay: null       // { t0, hours: [{ client: seconds }] x 24, requests }
+  property var uptime: []         // [{ name, target, note, open, state, since, ms, code, cert, err, checked }]
 
   // Short histories for the sparklines (one sample a second).
   property var cpuHist: []
@@ -77,6 +78,7 @@ Item {
     if (d.tail) tail = d.tail
     if (d.batDay) batDay = d.batDay
     if (d.npuDay) npuDay = d.npuDay
+    if (d.uptime) uptime = d.uptime
   }
 
   Process {
