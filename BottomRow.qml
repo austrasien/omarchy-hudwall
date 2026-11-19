@@ -244,12 +244,42 @@ Item {
     pal: row.pal
     x: row.px(2); width: row.pw; height: 176
     label: "Caffeine"
-    tip: "Caffeine estimated in your body (mg) and the best time for the next cup. Curve: today, dashed = forecast, vertical line = best time, dotted = the 'another cup is worth it' level. Bottom: agent tokens, focus and tasks on days with coffee against days without (over the days compared), and the tokens that come with each cup. Hover: have a coffee now, or log one drunk earlier (type its time, HH:mm)."
+    tip: "Caffeine estimated in your body (mg) and whether you can have another cup: GO (now is good), WAIT hh:mm (caffeine still high: from then), NO MORE (it will not fall in time), STOP (past the cutoff, 8 h before your bedtime), OVER (a cup after the cutoff: by how much), LIMIT (400 mg a day). Under it: the cutoff and the time left before it. On the curve, the red zone is after the cutoff. Curve: today, dashed = forecast, vertical line = best time, dotted = the 'another cup is worth it' level. Bottom: agent tokens, focus and tasks on days with coffee against days without (over the days compared), and the tokens that come with each cup. Hover: have a coffee now, or log one drunk earlier (type its time, HH:mm)."
     tipAbove: true
     tab: "stats"
     readonly property var cd: row.prom.coffeeDay
     readonly property var now: row.p && row.p.coffee ? row.p.coffee : (cd ? cd.coffee : null)
     note: now ? now.cupsToday + (now.cupsToday === 1 ? " cup" : " cups") : ""
+
+    // The verdict: can I have another cup? Prometheus' rule: none in the
+    // 8 hours before bed (the cutoff), caffeine back under the "worth it"
+    // level first, 400 mg a day at most.
+    property real clockNow: Date.now()
+    Timer { interval: 30000; repeat: true; running: coffee.visible; onTriggered: coffee.clockNow = Date.now() }
+    readonly property real bedMs: {
+      if (!cd || !now) return 0
+      var b = new Date(cd.fromMs); b.setHours(now.bedtimeHour || 0, 0, 0, 0)
+      var ms = b.getTime()
+      return ms > cd.fromMs ? ms : ms + 86400000
+    }
+    readonly property real cutoffMs: bedMs ? bedMs - 8 * 3600000 : 0
+    readonly property real lastAt: now && now.lastAt ? now.lastAt : 0
+    readonly property var verdict: {
+      if (!now || !cutoffMs) return null
+      var t = clockNow, left = cutoffMs - t
+      var cut = "cutoff " + row.clock(cutoffMs)
+      function span(ms) { var m = Math.round(ms / 60000); return m >= 60 ? row.hm(ms / 1000) : m + " min" }
+      var mg = cd ? cd.mgPerCup || 95 : 95
+      if (lastAt > cutoffMs && lastAt >= cd.fromMs)
+        return { k: "OVER", c: row.pal.red, d: "last cup " + span(lastAt - cutoffMs) + " past " + row.clock(cutoffMs) }
+      if (t >= cutoffMs) return { k: "STOP", c: row.pal.red, d: cut + " passed" }
+      if ((now.cupsToday + 1) * mg > (cd ? cd.limitMg || 400 : 400))
+        return { k: "LIMIT", c: row.pal.red, d: (cd ? cd.limitMg || 400 : 400) + " mg a day reached" }
+      var ideal = now.ideal ? now.ideal.at : null
+      if (!ideal) return { k: "NO MORE", c: row.pal.red, d: "won't drop before " + row.clock(cutoffMs) }
+      if (ideal <= t + 60000) return { k: "☕ GO", c: row.pal.series(1), d: cut + " · " + span(left) + " left" }
+      return { k: "WAIT " + row.clock(ideal), c: row.pal.series(2), d: cut + " · " + span(left) + " left" }
+    }
 
     // Logging a past cup: a time field, open until done or Escape.
     property bool logging: false
@@ -273,9 +303,34 @@ Item {
         HText { id: mgText; text: coffee.now ? Math.round(coffee.now.inBody || 0) : "–"; color: row.pal.fg; font.pixelSize: 22; font.weight: Font.DemiBold }
         HText {
           anchors.bottom: parent.bottom; anchors.bottomMargin: 4
-          width: parent.width - mgText.width - 6
-          text: "mg · " + (coffee.now && coffee.now.ideal && coffee.now.ideal.at ? "next best at " + row.clock(coffee.now.ideal.at) : (coffee.now && coffee.now.ideal ? coffee.now.ideal.reason : ""))
+          text: "mg"
           color: row.pal.mut; font.pixelSize: 9
+        }
+      }
+      // The verdict, right: a chip (go, wait, no) and the cutoff with the
+      // time left before it, or how far past it the last cup was.
+      Column {
+        visible: !coffee.showButtons && !!coffee.verdict
+        anchors.right: parent.right
+        spacing: 2
+        Rectangle {
+          anchors.right: parent.right
+          width: verdictText.implicitWidth + 12; height: verdictText.implicitHeight + 3; radius: 2
+          color: coffee.verdict ? row.pal.alpha(coffee.verdict.c, 0.16) : "transparent"
+          border.color: coffee.verdict ? row.pal.alpha(coffee.verdict.c, 0.7) : "transparent"
+          HText {
+            id: verdictText
+            anchors.centerIn: parent
+            text: coffee.verdict ? coffee.verdict.k : ""
+            color: coffee.verdict ? coffee.verdict.c : row.pal.fg
+            font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 1
+          }
+        }
+        HText {
+          anchors.right: parent.right
+          text: coffee.verdict ? coffee.verdict.d : ""
+          color: coffee.verdict && coffee.verdict.k.indexOf("OVER") === 0 ? row.pal.red : row.pal.dim
+          font.pixelSize: 9
         }
       }
       Row {
@@ -317,6 +372,8 @@ Item {
       pixelScale: row.pixelScale
       property var cdata: coffee.cd
       onCdataChanged: requestPaint()
+      property real cut: coffee.cutoffMs
+      onCutChanged: requestPaint()
       function draw(ctx) {
         if (!cdata || !cdata.caffeine || !cdata.caffeine.length) return
         var c = cdata.caffeine
@@ -342,13 +399,24 @@ Item {
           started ? ctx.lineTo(X(c[i].at), Y(c[i].mg)) : ctx.moveTo(X(c[i].at), Y(c[i].mg)); started = true
         }
         ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1
+        // After the cutoff (8 h before bed): a red zone up to bedtime, the line.
+        if (coffee.cutoffMs) {
+          var cx = X(coffee.cutoffMs), bx = Math.min(width, X(coffee.bedMs))
+          ctx.fillStyle = row.pal.css(row.pal.alpha(row.pal.red, 0.10)); ctx.fillRect(cx, 0, Math.max(0, bx - cx), height - 10)
+          ctx.setLineDash([3, 2]); ctx.strokeStyle = row.pal.css(row.pal.alpha(row.pal.red, 0.8)); ctx.lineWidth = 1
+          ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, height - 10); ctx.stroke(); ctx.setLineDash([])
+        }
         var nowX = X(cdata.now)
         ctx.strokeStyle = row.pal.css(row.pal.alpha(row.pal.fg, 0.3)); ctx.beginPath(); ctx.moveTo(nowX, 0); ctx.lineTo(nowX, height - 10); ctx.stroke()
         var ideal = cdata.coffee && cdata.coffee.ideal ? cdata.coffee.ideal.at : null
         if (ideal) { ctx.strokeStyle = row.pal.css(row.pal.series(1)); ctx.beginPath(); ctx.moveTo(X(ideal), 4); ctx.lineTo(X(ideal), height - 10); ctx.stroke() }
-        ctx.fillStyle = row.pal.css(row.pal.dim); ctx.font = "8px sans-serif"
+        ctx.font = "8px sans-serif"
         var cups = cdata.cups || []
-        for (i = 0; i < cups.length; i++) ctx.fillText("☕", X(cups[i].at || cups[i]) - 4, height)
+        for (i = 0; i < cups.length; i++) {
+          var at = cups[i].at || cups[i]
+          ctx.fillStyle = row.pal.css(coffee.cutoffMs && at > coffee.cutoffMs ? row.pal.red : row.pal.dim)
+          ctx.fillText("☕", X(at) - 4, height)
+        }
       }
     }
     // What coffee does: the average day with a cup against one without,
