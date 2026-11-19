@@ -676,6 +676,9 @@ class Uptime:
         except (OSError, ValueError, AttributeError):
             pass
         self.due = {}
+        self.source = ""
+        self.remote = {}         # name -> state from `uptimeSource`
+        self.remote_next = 0
         threading.Thread(target=self.run, daemon=True).start()
 
     def _poke_time(self):
@@ -690,10 +693,25 @@ class Uptime:
         for t in raw if isinstance(raw, list) else []:
             if isinstance(t, dict) and t.get("name") and (t.get("url") or t.get("tcp")):
                 targets.append(t)
+        source = cfg.get("uptimeSource") if isinstance(cfg.get("uptimeSource"), str) else ""
         with self.lock:
-            if targets != self.targets:
+            if targets != self.targets or source != self.source:
                 self.targets = targets
+                self.source = source
                 self.version += 1        # the HUD gets the new list at once
+
+    def fetch_remote(self):
+        """The states a watcher running elsewhere keeps (`uptimeSource`: a URL giving
+        { targets: [{ name, state, since, ms, code, cert, err, checked, hist }] }),
+        by name; {} when it cannot be read. Those services are not checked here:
+        the watcher has their whole history; the others (or all, when it is out of
+        reach) are."""
+        try:
+            with urllib.request.urlopen(self.source, timeout=5) as r:
+                d = json.load(r)
+            return {t["name"]: t for t in d.get("targets", []) if isinstance(t, dict) and t.get("name")}
+        except (OSError, ValueError, KeyError, TypeError):
+            return {}
 
     @staticmethod
     def tcp(host, port, timeout=4):
@@ -764,6 +782,19 @@ class Uptime:
             if poke != self.poke_seen:
                 self.poke_seen = poke
                 self.due = {}
+                self.remote_next = 0
+            if self.source and now >= self.remote_next:
+                self.remote_next = now + 15
+                remote = self.fetch_remote()
+                with self.lock:
+                    if remote != self.remote:
+                        self.remote = remote
+                        self.version += 1
+            elif not self.source and self.remote:
+                with self.lock:
+                    self.remote = {}
+                    self.version += 1
+            targets = [t for t in targets if t["name"] not in self.remote]
             todo = [t for t in targets if self.due.get(t["name"], 0) <= now]
             if todo:
                 for t in todo:
@@ -842,9 +873,10 @@ class Uptime:
                 return seen, None
             out = []
             for t in self.targets:
-                s = self.state.get(t["name"], {"state": "wait"})
+                r = self.remote.get(t["name"])
+                s = r or self.state.get(t["name"], {"state": "wait"})
                 out.append({"name": t["name"], "target": t.get("url") or t.get("tcp"), "note": t.get("note", ""),
-                            "open": t.get("open", t.get("url", "")),
+                            "open": t.get("open", t.get("url", "")), "via": "remote" if r else "local",
                             **{k: s.get(k) for k in ("state", "since", "ms", "code", "cert", "err", "checked")},
                             "hist": s.get("hist") or []})
             return self.version, out

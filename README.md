@@ -60,6 +60,7 @@ keeps stale sibling components.
 | `fps` | `24` | globe frame rate while seen (5–60) |
 | `pingPeers` | first 3 online | Tailscale host names to ping for latency |
 | `uptime` | `[]` | services to watch: the beacons over the globe (below) |
+| `uptimeSource` | none | URL of a watcher's states, used for the services it keeps (below) |
 | `places` | `{}` | named points always on the globe, `{ "server": [lon, lat] }`, lit when Tailscale sees that host |
 
 ## Services (beacons)
@@ -93,6 +94,13 @@ on a worn tape): target, state and since when, latency, HTTP status,
 certificate, last check, error, and the ping history of the last 120
 checks (a bar each, red when failed) with the uptime over them. A click
 opens the service.
+
+With `"uptimeSource": "https://watcher.example/status"`, the services a
+watcher running elsewhere keeps (a URL answering `{ "targets": [{ "name",
+"state", "since", "ms", "code", "cert", "err", "checked", "hist" }] }`, read
+every 15 s) are shown from it, with its continuous history; only the others,
+or all of them while it is out of reach, are checked here. The card says
+which (`SRC`).
 
 The checks run in a thread of the collector, so only while the HUD is
 seen; the last states are kept in `~/.local/state/hudwall/uptime.json`,

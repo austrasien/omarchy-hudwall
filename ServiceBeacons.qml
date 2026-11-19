@@ -177,6 +177,7 @@ Item {
       if (s.code) out.push(["HTTP", String(s.code)])
       if (s.cert !== null && s.cert !== undefined) out.push(["CERT", s.cert + " DAYS"])
       out.push(["CHK", beacons.ago(s.checked)])
+      out.push(["SRC", s.via === "remote" ? "WATCHER, ROUND THE CLOCK" : "THIS COMPUTER, WHILE SEEN"])
       if (s.err) out.push(["ERR", String(s.err).toUpperCase()])
       if (s.open) out.push(["OPEN", "CLICK THE BEACON"])
       return out
