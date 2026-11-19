@@ -646,9 +646,11 @@ class Uptime:
     ("name", "note", "open"; "url" or "tcp" as its target). A service the
     watcher does not keep is "wait"; with `"watcher": true`, the beacon is the
     watcher itself: up while it answers (its answer time as latency). While the
-    watcher cannot be read, every beacon is "nowatch" (grey): nothing is known.
+    watcher cannot be read, or answers with no check in the last 2 min (stuck),
+    every beacon is "nowatch" (grey): nothing is known.
     """
     EVERY = 15
+    STALE = 120          # s: a watcher whose last check is older answers but watches nothing
 
     def __init__(self):
         import threading
@@ -659,6 +661,7 @@ class Uptime:
         self.ms = None           # the watcher's answer time
         self.checked = None
         self.version = 0
+        self.why = ""
         self.wake = threading.Event()
         threading.Thread(target=self.run, daemon=True).start()
 
@@ -678,8 +681,15 @@ class Uptime:
             with urllib.request.urlopen(self.source, timeout=5) as r:
                 d = json.load(r)
             remote = {x["name"]: x for x in d.get("targets", []) if isinstance(x, dict) and x.get("name")}
+            # Answering is not enough: its last check must be recent, or it
+            # answers but checks nothing (a stuck watcher), and nothing is known.
+            newest = max([x.get("checked") or 0 for x in remote.values()] or [0])
+            if time.time() - newest > self.STALE:
+                self.why = "the watcher answers but has checked nothing for %d min" % ((time.time() - newest) // 60)
+                return None, None
             return remote, round((time.time() - t) * 1000)
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            self.why = "the watcher cannot be read"
             return None, None
 
     def run(self):
@@ -701,7 +711,7 @@ class Uptime:
             out = []
             for t in self.targets:
                 if self.remote is None:
-                    s = {"state": "nowatch", "err": "the watcher cannot be read" if self.source else "no uptimeSource in the config"}
+                    s = {"state": "nowatch", "err": (self.why or "the watcher cannot be read") if self.source else "no uptimeSource in the config"}
                 elif t.get("watcher"):
                     s = {"state": "up", "ms": self.ms, "checked": self.checked}
                 else:

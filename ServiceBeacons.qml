@@ -86,9 +86,12 @@ Item {
   // spreading over 8 beats, then the pause. -1 (no clock): no waves.
   property int beat: -1
   readonly property int waveSlot: 20
+  // Only while the watcher answers and keeps checking: with nothing known
+  // (NO WATCHER), the beacons stay still.
+  readonly property bool watched: list.length > 0 && !list.some(function(t) { return t.state === "nowatch" })
   readonly property int waveIndex: {
     var n = list.length
-    if (beat < 0 || !animate || n === 0) return -1
+    if (beat < 0 || !animate || n === 0 || !watched) return -1
     if (n === 1) return 0
     var s = Math.floor(beat / waveSlot) % (2 * (n - 1))
     return s <= n - 1 ? s : 2 * (n - 1) - s

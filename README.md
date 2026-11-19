@@ -85,8 +85,8 @@ last checks as `[time, ms or null, "u"|"s"|"d"]`. The `uptime` list gives the
 order and, for each beacon, its name, `note`, target (`url` or `tcp`, shown
 only) and what a click opens (`open`, the URL by default). A service the
 watcher does not keep shows as pending; `"watcher": true` is the watcher
-itself, up while it answers. While the watcher cannot be read, every beacon
-is a grey ring (`NO WATCHER`): nothing is known, which is not an outage.
+itself, up while it answers. While the watcher cannot be read, or answers
+with no check in the last 2 min, every beacon is a grey ring (`NO WATCHER`): nothing is known, which is not an outage.
 
 The beacons sit on the arc over the globe, just outside the months, from
 west-south-west to east-south-east. A service that answers is a plain dot
@@ -95,7 +95,7 @@ certificate expiring within 14 days; red, with the two rings of a ping: down.
 A hollow grey ring: the watcher cannot tell (`NO LINK`, `NO TAILNET`) or cannot
 be read. One beacon at a time sends out two spreading rings, then a pause,
 then the next, first to last and back (2.5 s each, on the HUD's clock: no
-frame of its own). Hovering a beacon locks a data card onto it, the day tape's way
+frame of its own), only while the watcher answers and keeps checking. Hovering a beacon locks a data card onto it, the day tape's way
 (wipe, closing brackets, scan line, typed text on a worn tape): target,
 state and since when, latency, HTTP status, certificate, last check, error,
 and the ping history of the last checks (a bar each, red when failed) with
