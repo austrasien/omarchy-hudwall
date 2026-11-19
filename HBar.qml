@@ -25,7 +25,8 @@ Item {
     id: fill
     width: parent.width * Math.max(0, Math.min(1, bar.value)); height: parent.height
     color: bar.color
-    Behavior on width { NumberAnimation { duration: Style.duration(260); easing.type: Easing.OutCubic } }
+    // No easing: values arrive on the HUD's clock, and easing them would
+    // redraw the whole HUD at 60 fps for a quarter of a second each time.
   }
   // The glow: a wider, fainter copy.
   Rectangle {

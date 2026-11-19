@@ -7,8 +7,8 @@ import qs.Commons
 // just outside the months. A service that answers is a plain dot in the
 // HUD's accent (the panels' titles); amber when slow (or its certificate expires
 // within 14 days); red, sending out pings, when it failed twice in a row;
-// a hollow grey ring when this machine cannot tell (no Internet, no
-// Tailscale), which is not an outage.
+// a hollow grey ring when the watcher cannot tell (no Internet, no
+// Tailscale) or cannot be read, which is not an outage.
 //
 // Hovering a beacon locks a data card onto it, the way the day tape does
 // (the panel wipes open, the brackets close in, a scan line paints it, the
@@ -73,7 +73,7 @@ Item {
     var p90 = lat.length ? lat[Math.min(lat.length - 1, Math.floor(lat.length * 0.9))] : 0
     return { n: n, up: n ? ok / n * 100 : 0, avg: cnt ? Math.round(sum / cnt) : 0, max: max, p90: p90, low: lat.length ? lat[0] : 0, first: n ? hist[0][0] : 0 }
   }
-  readonly property var stateWord: ({ up: "NOMINAL", slow: "CAUTION", down: "DOWN", off: "NO TAILNET", nolink: "NO LINK", wait: "PENDING" })
+  readonly property var stateWord: ({ up: "NOMINAL", slow: "CAUTION", down: "DOWN", off: "NO TAILNET", nolink: "NO LINK", wait: "PENDING", nowatch: "NO WATCHER" })
 
   // ------------------------------------------------------------ beacons
 
@@ -177,7 +177,7 @@ Item {
       if (s.code) out.push(["HTTP", String(s.code)])
       if (s.cert !== null && s.cert !== undefined) out.push(["CERT", s.cert + " DAYS"])
       out.push(["CHK", beacons.ago(s.checked)])
-      out.push(["SRC", s.via === "remote" ? "WATCHER, ROUND THE CLOCK" : "THIS COMPUTER, WHILE SEEN"])
+      out.push(["SRC", s.via === "watcher" ? "THE WATCHER ITSELF (IT ANSWERS)" : "WATCHER, ROUND THE CLOCK"])
       if (s.err) out.push(["ERR", String(s.err).toUpperCase()])
       if (s.open) out.push(["OPEN", "CLICK THE BEACON"])
       return out

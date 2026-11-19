@@ -73,10 +73,14 @@ Item {
         readonly property int n: col.sys.cpu.threads ? col.sys.cpu.threads.length : 12
         spacing: 2
         readonly property real bw: (width - (n - 1) * spacing) / n
+        // By count, the bars updated in place, without easing: a reading
+        // (on the HUD's clock) moves them in one step instead of 400 ms of
+        // 60 fps frames every second.
         Repeater {
-          model: col.sys.cpu.threads || []
+          model: (col.sys.cpu.threads || []).length
           Item {
-            required property var modelData
+            required property int index
+            readonly property real modelData: (col.sys.cpu.threads || [])[index] || 0
             width: threads.bw; height: threads.height
             Rectangle { anchors.fill: parent; color: col.pal.alpha(col.pal.fg, 0.05) }
             Rectangle {
@@ -84,7 +88,6 @@ Item {
               width: parent.width; height: Math.max(1, parent.height * modelData)
               color: cpuPanel.c
               opacity: 0.45 + 0.55 * modelData
-              Behavior on height { NumberAnimation { duration: 400 } }
             }
           }
         }

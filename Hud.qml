@@ -49,7 +49,7 @@ Item {
   readonly property color accent: theme.acc
   // On a low battery the HUD stays up but stops moving.
   readonly property bool lowPower: sys.bat.status === "Discharging" && sys.bat.pct !== undefined && sys.bat.pct <= 15
-  Sys { id: sys; active: hud.active }
+  Sys { id: sys; active: hud.active; beat: hud.beat }
   // The HUD's one clock for whatever keeps moving (the globe's sweep, the
   // season ribbon's shine, the ghosts): eight steps a second, all on the
   // same frames. Any running Qt animation, a pause included, would redraw

@@ -59,53 +59,45 @@ keeps stale sibling components.
 | `mark` | none | `{ "image": "~/path/logo.png", "name": "ACME" }`: the mark at the top of the right column (the host name without it) |
 | `fps` | `24` | globe frame rate while seen (5–60) |
 | `pingPeers` | first 3 online | Tailscale host names to ping for latency |
-| `uptime` | `[]` | services to watch: the beacons over the globe (below) |
-| `uptimeSource` | none | URL of a watcher's states, used for the services it keeps (below) |
+| `uptime` | `[]` | services shown as beacons over the globe (below) |
+| `uptimeSource` | none | URL of the watcher whose states the beacons show (below) |
 | `places` | `{}` | named points always on the globe, `{ "server": [lon, lat] }`, lit when Tailscale sees that host |
 
 ## Services (beacons)
 
+The HUD does not check anything itself: a watcher running elsewhere (a
+server that stays up) does, and the HUD shows what it reads from it every
+15 s, so one copy of the checks, round the clock, with their history.
+
 ```json
+"uptimeSource": "https://watcher.example:8444/status",
 "uptime": [
   { "name": "API", "url": "https://api.example.com", "note": "production" },
-  { "name": "SITE", "url": "https://example.com", "slow": 3000 },
-  { "name": "NAS", "tcp": "192.0.2.10:22", "every": 60, "open": "xdg-terminal-exec ssh nas" }
+  { "name": "NAS", "tcp": "192.0.2.10:22", "open": "xdg-terminal-exec ssh nas" },
+  { "name": "WATCH", "watcher": true, "note": "the watcher's own server" }
 ]
 ```
 
-A `url` is up when it answers below status 500 (a redirect or a 404 is an
-answer), and its certificate's expiry is read on the way. A `tcp` target is a
-bare connect, closed at once. `every`: seconds between checks (30 for a URL,
-300 for a TCP port, as repeated connects to SSH can look like a scan to
-fail2ban); `slow`: ms above which the beacon turns amber (1500); `open`: what a
-click opens (the URL by default, or a command line); `note`: shown in the
-details. Names are best kept short (seven letters).
+`uptimeSource` answers
+`{ "targets": [{ "name", "state", "since", "ms", "code", "cert", "err", "checked", "hist" }] }`,
+`state` one of `up`, `slow`, `down`, `off`, `nolink`, `wait`; `hist` the
+last checks as `[time, ms or null, "u"|"s"|"d"]`. The `uptime` list gives the
+order and, for each beacon, its name, `note`, target (`url` or `tcp`, shown
+only) and what a click opens (`open`, the URL by default). A service the
+watcher does not keep shows as pending; `"watcher": true` is the watcher
+itself, up while it answers. While the watcher cannot be read, every beacon
+is a grey ring (`NO WATCHER`): nothing is known, which is not an outage.
 
 The beacons sit on the arc over the globe, just outside the months, from
 west-south-west to east-south-east. A service that answers is a plain dot
 in the HUD's accent (the colour of the panels' titles); amber: slow, or a
-certificate expiring within 14 days; red, with the two rings of a ping: failed twice
-in a row (a first failure is checked again 10 s later). A hollow grey ring
-is not an outage: `NO LINK` when this machine cannot reach the Internet
-either (a connect to 1.1.1.1:443 fails too), `NO TAILNET` for a Tailscale
-address while Tailscale is not running. Hovering a beacon locks a data card
-onto it, the day tape's way (wipe, closing brackets, scan line, typed text
-on a worn tape): target, state and since when, latency, HTTP status,
-certificate, last check, error, and the ping history of the last 120
-checks (a bar each, red when failed) with the uptime over them. A click
-opens the service.
-
-With `"uptimeSource": "https://watcher.example/status"`, the services a
-watcher running elsewhere keeps (a URL answering `{ "targets": [{ "name",
-"state", "since", "ms", "code", "cert", "err", "checked", "hist" }] }`, read
-every 15 s) are shown from it, with its continuous history; only the others,
-or all of them while it is out of reach, are checked here. The card says
-which (`SRC`).
-
-The checks run in a thread of the collector, so only while the HUD is
-seen; the last states are kept in `~/.local/state/hudwall/uptime.json`,
-shown at once next time (touch `uptime.poke` there to check everything
-again).
+certificate expiring within 14 days; red, with the two rings of a ping: down.
+A hollow grey ring: the watcher cannot tell (`NO LINK`, `NO TAILNET`) or cannot
+be read. Hovering a beacon locks a data card onto it, the day tape's way
+(wipe, closing brackets, scan line, typed text on a worn tape): target,
+state and since when, latency, HTTP status, certificate, last check, error,
+and the ping history of the last checks (a bar each, red when failed) with
+the uptime over them. A click opens the service.
 
 ## IPC
 
@@ -163,12 +155,15 @@ the NPU journal only after the NPU served requests.
 
 Any running Qt animation, a pause in a looping one included, makes Qt
 redraw the whole HUD at 60 fps for as long as it runs: with the league
-glint, the season ribbon's shine and the ghosts' float it was at 60 fps all
-the time, about 45 % of a core more than hidden. Everything that keeps
-moving now steps on one 8 Hz clock (`beat` in Hud.qml), on the same frames,
-and the globe's sweep too: about 18 frames a second, 30 % of a core for the
-whole shell (measured 2026-11-19, with `frames` below). A new animation
-should step on `beat` rather than loop.
+glint, the season ribbon's shine, the ghosts' float and the CPU threads'
+easing it was at 60 fps all the time, about 60 % of a core. What keeps
+moving now steps on one 8 Hz clock (`beat` in Hud.qml), on the same frames:
+the globe, the ghosts, the league glint (every 8 s), the season shine (a
+sweep every 12 s: its layer effect costs two frames a step), and the
+collector's readings, applied on the next beat; data-driven bars no longer
+ease. About 11 frames a second, 19 % of a core for the whole shell
+(measured 2026-11-19 with `frames` below). A new animation should step on
+`beat` rather than loop or ease.
 
 `omarchy-shell austraz.hudwall frames` gives the frames drawn so far; twice
 a few seconds apart, the frame rate.

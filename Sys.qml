@@ -8,6 +8,20 @@ Item {
   id: sys
 
   property bool active: false
+  // The HUD's 8 Hz clock (Hud.qml): readings are applied on its next beat,
+  // so they redraw on the frames the HUD draws anyway. -1: at once.
+  property int beat: -1
+  property var pending: []
+  onBeatChanged: {
+    if (!pending.length) return
+    var lines = pending
+    pending = []
+    for (var i = 0; i < lines.length; i++) ingest(lines[i])
+  }
+  function receive(line) {
+    if (beat < 0) ingest(line)
+    else pending.push(line)
+  }
 
   property var cpu: ({})
   property var gpu: ({})
@@ -84,7 +98,7 @@ Item {
   Process {
     id: proc
     command: [sys.collector]
-    stdout: SplitParser { onRead: data => sys.ingest(data) }
+    stdout: SplitParser { onRead: data => sys.receive(data) }
     stderr: SplitParser { onRead: data => console.warn("hudwall-collector:", data) }
     onExited: if (sys.active) restart.start()
   }

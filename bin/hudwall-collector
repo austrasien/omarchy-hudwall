@@ -9,8 +9,8 @@ NPU's 24 h history is read again from the journal only when the NPU served
 requests since the last read (or every 10 min, as the hours roll).
 
 Stdlib only. Nothing goes on the network but loopback calls to Lemonade,
-pings to the Tailscale peers named in the config, and the uptime checks of
-the services listed in it (`uptime`, from a thread of their own).
+pings to the Tailscale peers named in the config, and a read of the uptime
+watcher's states (`uptimeSource`, every 15 s, from a thread of its own).
 """
 
 import ipaddress
@@ -635,236 +635,63 @@ class Tailnet:
 # --------------------------------------------------------------- uptime
 
 class Uptime:
-    """Watches the services listed under `uptime` in the config, from a
-    thread so that slow or dead targets never hold the 1 Hz loop back.
+    """The services listed under `uptime` in the config, as a watcher running
+    elsewhere sees them: the HUD does not check anything itself (one copy of
+    the checks, on the watcher), it reads `uptimeSource`, a URL answering
+    { "targets": [{ "name", "state", "since", "ms", "code", "cert", "err",
+    "checked", "hist": [[time, ms or null, "u"|"s"|"d"], ...] }] }, every 15 s
+    from a thread of its own.
 
-    A target is { "name", "url" } (HTTPS or HTTP: up below status 500, with
-    the certificate's expiry) or { "name", "tcp": "host:port" } (a bare
-    connect, closed at once). Optional: "every" (seconds, default 30 for a
-    URL, 300 for a TCP port, as a TCP probe on SSH can look like a scan),
-    "slow" (ms, default 1500), "note", "open" (what a click on the tile
-    opens, a URL or a command line).
-
-    States: up, slow (answers, but slowly or with a certificate expiring
-    within 14 days), down (failed twice in a row), wait (not checked yet),
-    nolink (this machine has no Internet: the reference connect fails too)
-    and off (a Tailscale address while Tailscale is not running). Neither
-    nolink nor off counts as an outage. The last state, since when it holds
-    and the last 120 checks (time, ms, u/s/d) are kept in ~/.local/state/hudwall/uptime.json, so the HUD shows
-    them at once; touching uptime.poke there checks everything again now.
+    The config's list gives the order, and what each beacon shows and opens
+    ("name", "note", "open"; "url" or "tcp" as its target). A service the
+    watcher does not keep is "wait"; with `"watcher": true`, the beacon is the
+    watcher itself: up while it answers (its answer time as latency). While the
+    watcher cannot be read, every beacon is "nowatch" (grey): nothing is known.
     """
-    PATH = os.path.join(STATE, "uptime.json")
-    POKE = os.path.join(STATE, "uptime.poke")
-    REFERENCE = ("1.1.1.1", 443)
-    HIST = 120           # checks kept per service: [time, ms or None, "u"|"s"|"d"]
-    _tls = None          # one TLS context for all checks (loading the CAs costs)
+    EVERY = 15
 
     def __init__(self):
         import threading
         self.lock = threading.Lock()
         self.targets = []
-        self.state = {}      # name -> {state, since, ms, code, cert, err, checked, fails}
-        self.version = 0
-        self.poke_seen = self._poke_time()
-        try:
-            with open(self.PATH) as f:
-                old = json.load(f).get("targets", {})
-            for name, s in old.items():
-                self.state[name] = {"state": s.get("state", "wait"), "since": s.get("since"), "checked": s.get("checked"),
-                                    "ms": s.get("ms"), "code": s.get("code"), "cert": s.get("cert"), "err": s.get("err"), "fails": 0,
-                                    "hist": [h for h in s.get("hist") or [] if isinstance(h, list) and len(h) == 3][-self.HIST:]}
-        except (OSError, ValueError, AttributeError):
-            pass
-        self.due = {}
         self.source = ""
-        self.remote = {}         # name -> state from `uptimeSource`
-        self.remote_next = 0
+        self.remote = None       # name -> state; None while the watcher cannot be read
+        self.ms = None           # the watcher's answer time
+        self.checked = None
+        self.version = 0
+        self.wake = threading.Event()
         threading.Thread(target=self.run, daemon=True).start()
-
-    def _poke_time(self):
-        try:
-            return os.stat(self.POKE).st_mtime
-        except OSError:
-            return 0
 
     def configure(self, cfg):
         raw = cfg.get("uptime")
-        targets = []
-        for t in raw if isinstance(raw, list) else []:
-            if isinstance(t, dict) and t.get("name") and (t.get("url") or t.get("tcp")):
-                targets.append(t)
+        targets = [t for t in (raw if isinstance(raw, list) else []) if isinstance(t, dict) and t.get("name")]
         source = cfg.get("uptimeSource") if isinstance(cfg.get("uptimeSource"), str) else ""
         with self.lock:
             if targets != self.targets or source != self.source:
-                self.targets = targets
-                self.source = source
+                self.targets, self.source = targets, source
                 self.version += 1        # the HUD gets the new list at once
+                self.wake.set()
 
-    def fetch_remote(self):
-        """The states a watcher running elsewhere keeps (`uptimeSource`: a URL giving
-        { targets: [{ name, state, since, ms, code, cert, err, checked, hist }] }),
-        by name; {} when it cannot be read. Those services are not checked here:
-        the watcher has their whole history; the others (or all, when it is out of
-        reach) are."""
+    def fetch(self):
+        t = time.time()
         try:
             with urllib.request.urlopen(self.source, timeout=5) as r:
                 d = json.load(r)
-            return {t["name"]: t for t in d.get("targets", []) if isinstance(t, dict) and t.get("name")}
-        except (OSError, ValueError, KeyError, TypeError):
-            return {}
-
-    @staticmethod
-    def tcp(host, port, timeout=4):
-        import socket
-        t = time.time()
-        s = socket.create_connection((host, int(port)), timeout)
-        s.close()
-        return round((time.time() - t) * 1000)
-
-    @staticmethod
-    def https(url, timeout=6):
-        import http.client
-        import ssl
-        import urllib.parse
-        u = urllib.parse.urlsplit(url)
-        t = time.time()
-        if u.scheme == "https":
-            if Uptime._tls is None:
-                Uptime._tls = ssl.create_default_context()
-            conn = http.client.HTTPSConnection(u.hostname, u.port or 443, timeout=timeout, context=Uptime._tls)
-        else:
-            conn = http.client.HTTPConnection(u.hostname, u.port or 80, timeout=timeout)
-        try:
-            conn.request("GET", (u.path or "/") + ("?" + u.query if u.query else ""), headers={"User-Agent": "hudwall-uptime"})
-            r = conn.getresponse()
-            ms = round((time.time() - t) * 1000)
-            cert = None
-            if u.scheme == "https" and conn.sock:
-                after = (conn.sock.getpeercert() or {}).get("notAfter")
-                if after:
-                    cert = int((ssl.cert_time_to_seconds(after) - time.time()) // 86400)
-            return r.status, ms, cert
-        finally:
-            conn.close()
-
-    @staticmethod
-    def tailnet_up():
-        try:
-            r = subprocess.run(["tailscale", "status", "--json"], capture_output=True, text=True, timeout=4)
-            return json.loads(r.stdout).get("BackendState") == "Running"
-        except (OSError, subprocess.SubprocessError, ValueError):
-            return False
-
-    def check(self, t):
-        """(state, ms, code, cert, err) for one target."""
-        slow = t.get("slow", 1500)
-        try:
-            if t.get("url"):
-                code, ms, cert = self.https(t["url"])
-                if code >= 500:
-                    return "down", ms, code, cert, "HTTP %d" % code
-                if ms > slow or (cert is not None and cert < 14):
-                    return "slow", ms, code, cert, None
-                return "up", ms, code, cert, None
-            host, _, port = t["tcp"].rpartition(":")
-            ms = self.tcp(host, port)
-            return ("slow" if ms > slow else "up"), ms, None, None, None
-        except Exception as e:          # noqa: BLE001 - any failure is the answer
-            msg = str(getattr(e, "reason", "") or e) or type(e).__name__
-            return "down", None, None, None, msg[:60]
+            remote = {x["name"]: x for x in d.get("targets", []) if isinstance(x, dict) and x.get("name")}
+            return remote, round((time.time() - t) * 1000)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            return None, None
 
     def run(self):
         while True:
-            now = time.time()
-            with self.lock:
-                targets = list(self.targets)
-            poke = self._poke_time()
-            if poke != self.poke_seen:
-                self.poke_seen = poke
-                self.due = {}
-                self.remote_next = 0
-            if self.source and now >= self.remote_next:
-                self.remote_next = now + 15
-                remote = self.fetch_remote()
+            if self.source:
+                remote, ms = self.fetch()
                 with self.lock:
-                    if remote != self.remote:
-                        self.remote = remote
+                    if remote != self.remote or (self.remote is None) != (remote is None):
                         self.version += 1
-            elif not self.source and self.remote:
-                with self.lock:
-                    self.remote = {}
-                    self.version += 1
-            targets = [t for t in targets if t["name"] not in self.remote]
-            todo = [t for t in targets if self.due.get(t["name"], 0) <= now]
-            if todo:
-                for t in todo:
-                    self.due[t["name"]] = now + t.get("every", 30 if t.get("url") else 300)
-                # All due checks at once: a dead target's timeout holds no other.
-                from concurrent.futures import ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=min(8, len(todo))) as pool:
-                    results = list(pool.map(self.check, todo))
-                # A failure is judged once for the batch: is it this machine?
-                link, tail = None, None
-                batch = []
-                for t, (state, ms, code, cert, err) in zip(todo, results):
-                    if state == "down":
-                        host = (t.get("tcp") or "").rpartition(":")[0]
-                        if host.startswith("100.") or host.endswith(".ts.net") or ".ts.net" in (t.get("url") or ""):
-                            tail = self.tailnet_up() if tail is None else tail
-                            if not tail:
-                                state, err = "off", "Tailscale is not running"
-                        if state == "down":
-                            if link is None:
-                                try:
-                                    self.tcp(*self.REFERENCE, timeout=3)
-                                    link = True
-                                except OSError:
-                                    link = False
-                            if not link:
-                                state, err = "nolink", "no Internet from this machine"
-                    batch.append((t["name"], state, ms, code, cert, err))
-                self.record(batch)
-                for name, state, *_ in batch:
-                    if state == "down" and self.state[name]["state"] != "down":
-                        self.due[name] = time.time() + 10      # confirm soon
-            time.sleep(1)
-
-    def record(self, batch):
-        now = round(time.time())
-        with self.lock:
-            for name, state, ms, code, cert, err in batch:
-                self._record(now, name, state, ms, code, cert, err)
-            self.version += 1
-        self.save()
-
-    def _record(self, now, name, state, ms, code, cert, err):
-        s = self.state.setdefault(name, {"state": "wait", "since": now, "fails": 0})
-        # The history keeps every real answer or failure, doubts included;
-        # NO LINK and OFF say nothing of the service and are left out.
-        if state in ("up", "slow", "down"):
-            s["hist"] = (s.get("hist") or [])[-(self.HIST - 1):] + [[now, ms, state[0]]]
-        # One failure is a doubt: the tile keeps its state until the next.
-        if state == "down":
-            s["fails"] = s.get("fails", 0) + 1
-            if s["fails"] < 2 and s["state"] not in ("wait", "down"):
-                state = s["state"]
-        else:
-            s["fails"] = 0
-        if s["state"] != state:
-            s["state"], s["since"] = state, now
-        s.update({"ms": ms, "code": code, "cert": cert if cert is not None else s.get("cert"), "err": err, "checked": now})
-
-    def save(self):
-        with self.lock:
-            out = {"t": round(time.time()), "targets": {k: {x: v[x] for x in v if x != "fails"} for k, v in self.state.items()}}
-        try:
-            os.makedirs(STATE, exist_ok=True)
-            tmp = self.PATH + ".tmp"
-            with open(tmp, "w") as f:
-                json.dump(out, f)
-            os.replace(tmp, self.PATH)
-        except OSError:
-            pass
+                    self.remote, self.ms, self.checked = remote, ms, round(time.time())
+            self.wake.wait(self.EVERY)
+            self.wake.clear()
 
     def sample(self, seen=None):
         """(version, services), or (version, None) when nothing changed since `seen`."""
@@ -873,10 +700,15 @@ class Uptime:
                 return seen, None
             out = []
             for t in self.targets:
-                r = self.remote.get(t["name"])
-                s = r or self.state.get(t["name"], {"state": "wait"})
-                out.append({"name": t["name"], "target": t.get("url") or t.get("tcp"), "note": t.get("note", ""),
-                            "open": t.get("open", t.get("url", "")), "via": "remote" if r else "local",
+                if self.remote is None:
+                    s = {"state": "nowatch", "err": "the watcher cannot be read" if self.source else "no uptimeSource in the config"}
+                elif t.get("watcher"):
+                    s = {"state": "up", "ms": self.ms, "checked": self.checked}
+                else:
+                    s = self.remote.get(t["name"]) or {"state": "wait", "err": "not kept by the watcher"}
+                out.append({"name": t["name"], "target": t.get("url") or t.get("tcp") or "", "note": t.get("note", ""),
+                            "open": t.get("open", t.get("url", "")),
+                            "via": "watcher" if t.get("watcher") else "remote",
                             **{k: s.get(k) for k in ("state", "since", "ms", "code", "cert", "err", "checked")},
                             "hist": s.get("hist") or []})
             return self.version, out

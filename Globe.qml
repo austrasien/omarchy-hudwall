@@ -13,12 +13,12 @@ Item {
   required property var pal
   property bool active: false
   property real fps: 24
-  // The HUD's 8 Hz clock: while the globe sweeps (slowly, about 6 degrees a
-  // second, for as long as its routes do not fit its face) it moves on these
-  // beats, on the same frames as the rest of the HUD. -1: its own timer.
+  // The HUD's 8 Hz clock: the globe moves on its beats (every beat while it
+  // turns or sweeps, every eighth once settled), on the same frames as the
+  // rest of the HUD. -1: its own timer.
   property int beat: -1
-  readonly property bool beatDriven: sweeping && beat >= 0
-  onBeatChanged: if (beatDriven && active && visible) tick()
+  readonly property bool beatDriven: beat >= 0
+  onBeatChanged: if (beatDriven && active && visible && (moving || beat % 8 === 0)) tick()
   property var home: [0, 51.48]
   property var peers: []          // [{ lat, lon, proc, city, live }]
   property real radius: 170
