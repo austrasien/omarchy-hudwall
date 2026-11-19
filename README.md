@@ -82,7 +82,7 @@ details. Names are best kept short (seven letters).
 
 The beacons sit on the arc over the globe, just outside the months, from
 west-south-west to east-south-east. A service that answers is a plain dot
-in the theme's contrast colour (bright green); amber: slow, or a
+in the HUD's accent (the colour of the panels' titles); amber: slow, or a
 certificate expiring within 14 days; red, sending out pings: failed twice
 in a row (a first failure is checked again 10 s later). A hollow grey ring
 is not an outage: `NO LINK` when this machine cannot reach the Internet
@@ -90,7 +90,9 @@ either (a connect to 1.1.1.1:443 fails too), `NO TAILNET` for a Tailscale
 address while Tailscale is not running. Hovering a beacon locks a data card
 onto it, the day tape's way (wipe, closing brackets, scan line, typed text
 on a worn tape): target, state and since when, latency, HTTP status,
-certificate, last check, error. A click opens the service.
+certificate, last check, error, and the ping history of the last 120
+checks (a bar each, red when failed) with the uptime over them. A click
+opens the service.
 
 The checks run in a thread of the collector, so only while the HUD is
 seen; the last states are kept in `~/.local/state/hudwall/uptime.json`,

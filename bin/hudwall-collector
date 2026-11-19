@@ -649,13 +649,14 @@ class Uptime:
     within 14 days), down (failed twice in a row), wait (not checked yet),
     nolink (this machine has no Internet: the reference connect fails too)
     and off (a Tailscale address while Tailscale is not running). Neither
-    nolink nor off counts as an outage. The last state and since when it
-    holds are kept in ~/.local/state/hudwall/uptime.json, so the HUD shows
+    nolink nor off counts as an outage. The last state, since when it holds
+    and the last 120 checks (time, ms, u/s/d) are kept in ~/.local/state/hudwall/uptime.json, so the HUD shows
     them at once; touching uptime.poke there checks everything again now.
     """
     PATH = os.path.join(STATE, "uptime.json")
     POKE = os.path.join(STATE, "uptime.poke")
     REFERENCE = ("1.1.1.1", 443)
+    HIST = 120           # checks kept per service: [time, ms or None, "u"|"s"|"d"]
 
     def __init__(self):
         import threading
@@ -669,7 +670,8 @@ class Uptime:
                 old = json.load(f).get("targets", {})
             for name, s in old.items():
                 self.state[name] = {"state": s.get("state", "wait"), "since": s.get("since"), "checked": s.get("checked"),
-                                    "ms": s.get("ms"), "code": s.get("code"), "cert": s.get("cert"), "err": s.get("err"), "fails": 0}
+                                    "ms": s.get("ms"), "code": s.get("code"), "cert": s.get("cert"), "err": s.get("err"), "fails": 0,
+                                    "hist": [h for h in s.get("hist") or [] if isinstance(h, list) and len(h) == 3][-self.HIST:]}
         except (OSError, ValueError, AttributeError):
             pass
         self.due = {}
@@ -789,6 +791,10 @@ class Uptime:
         now = round(time.time())
         with self.lock:
             s = self.state.setdefault(name, {"state": "wait", "since": now, "fails": 0})
+            # The history keeps every real answer or failure, doubts included;
+            # NO LINK and OFF say nothing of the service and are left out.
+            if state in ("up", "slow", "down"):
+                s["hist"] = (s.get("hist") or [])[-(self.HIST - 1):] + [[now, ms, state[0]]]
             # One failure is a doubt: the tile keeps its state until the next.
             if state == "down":
                 s["fails"] = s.get("fails", 0) + 1
@@ -821,7 +827,8 @@ class Uptime:
                 s = self.state.get(t["name"], {"state": "wait"})
                 out.append({"name": t["name"], "target": t.get("url") or t.get("tcp"), "note": t.get("note", ""),
                             "open": t.get("open", t.get("url", "")),
-                            **{k: s.get(k) for k in ("state", "since", "ms", "code", "cert", "err", "checked")}})
+                            **{k: s.get(k) for k in ("state", "since", "ms", "code", "cert", "err", "checked")},
+                            "hist": s.get("hist") or []})
             return self.version, out
 
 

@@ -5,7 +5,7 @@ import qs.Commons
 // The services listed under `uptime` in the config (checked by the
 // collector), as beacons on the arc over the globe, west to north to east,
 // just outside the months. A service that answers is a plain dot in the
-// theme's contrast colour; amber when slow (or its certificate expires
+// HUD's accent (the panels' titles); amber when slow (or its certificate expires
 // within 14 days); red, sending out pings, when it failed twice in a row;
 // a hollow grey ring when this machine cannot tell (no Internet, no
 // Tailscale), which is not an outage.
@@ -45,7 +45,7 @@ Item {
     switch (t.state) {
     case "down": return pal.red
     case "slow": return pal.yellow
-    case "up": return pal.acc2
+    case "up": return hud
     default: return pal.mut
     }
   }
@@ -60,6 +60,18 @@ Item {
     if (!ts) return "NEVER"
     var s = Math.max(0, Math.round(Date.now() / 1000 - ts))
     return s < 90 ? s + " S AGO" : s < 5400 ? Math.round(s / 60) + " MIN AGO" : Math.round(s / 3600) + " H AGO"
+  }
+  // Figures over a service's kept checks.
+  function stats(hist) {
+    var n = hist.length, ok = 0, sum = 0, cnt = 0, max = 0
+    for (var i = 0; i < n; i++) {
+      var h = hist[i]
+      if (h[2] !== "d") ok++
+      if (h[1] !== null && h[1] !== undefined) { sum += h[1]; cnt++; max = Math.max(max, h[1]) }
+    }
+    var lat = hist.filter(function(h) { return h[1] !== null && h[1] !== undefined }).map(function(h) { return h[1] }).sort(function(a, b) { return a - b })
+    var p90 = lat.length ? lat[Math.min(lat.length - 1, Math.floor(lat.length * 0.9))] : 0
+    return { n: n, up: n ? ok / n * 100 : 0, avg: cnt ? Math.round(sum / cnt) : 0, max: max, p90: p90, low: lat.length ? lat[0] : 0, first: n ? hist[0][0] : 0 }
   }
   readonly property var stateWord: ({ up: "NOMINAL", slow: "CAUTION", down: "DOWN", off: "NO TAILNET", nolink: "NO LINK", wait: "PENDING" })
 
@@ -358,6 +370,68 @@ Item {
                 wrapMode: Text.WrapAnywhere
                 maximumLineCount: 2
               }
+            }
+          }
+
+          // ---- the ping history: one bar per check, the latest on the right
+          ScaleLine { visible: history.n > 0 }
+          Item {
+            id: history
+            visible: n > 0
+            readonly property var hist: card.live && card.live.hist ? card.live.hist : []
+            readonly property var st: beacons.stats(hist)
+            readonly property int n: hist.length
+            width: parent.width
+            height: histHead.implicitHeight + 4 + 30 + 4 + histFoot.implicitHeight
+            HText {
+              id: histHead
+              text: "PING · " + history.n + " CHECKS"
+              color: beacons.dim; font.pixelSize: 8; font.bold: true
+            }
+            HText {
+              anchors.right: parent.right
+              text: "UP " + (history.st.up >= 99.95 ? "100" : history.st.up.toFixed(1)) + " %"
+              color: history.st.up >= 99.95 ? beacons.bright : history.st.up >= 95 ? beacons.pal.yellow : beacons.pal.red
+              font.pixelSize: 8; font.bold: true
+            }
+            Item {
+              id: chart
+              y: histHead.implicitHeight + 4
+              width: parent.width; height: 30
+              // Room for at least 40 bars, so a few checks stay thin.
+              readonly property real step: width / Math.max(40, history.n)
+              // From just under the fastest ping to 1.5 x the 90th percentile:
+              // the usual jitter shows, and a spike is clipped to the top
+              // rather than flattening the rest.
+              readonly property real low: history.st.low * 0.8
+              readonly property real peak: Math.max(low + 20, history.st.p90 * 1.5)
+              Rectangle { y: parent.height - 1; width: parent.width; height: 1; color: beacons.dim; opacity: 0.6 }
+              Repeater {
+                model: history.hist
+                delegate: Rectangle {
+                  required property var modelData
+                  required property int index
+                  readonly property bool failed: modelData[2] === "d"
+                  x: chart.width - (history.n - index) * chart.step
+                  width: Math.max(1, chart.step - 0.6)
+                  height: failed ? chart.height : chart.height * (0.12 + 0.88 * Math.max(0, Math.min(1, ((modelData[1] || 0) - chart.low) / (chart.peak - chart.low))))
+                  y: chart.height - height
+                  color: failed ? beacons.pal.red : modelData[2] === "s" ? beacons.pal.yellow : beacons.hud
+                  opacity: failed ? 0.75 : index === history.n - 1 ? 1 : 0.6
+                }
+              }
+            }
+            HText {
+              id: histFoot
+              y: chart.y + chart.height + 4
+              text: "AVG " + history.st.avg + " MS · MAX " + history.st.max + " MS"
+              color: beacons.hud; font.pixelSize: 8
+            }
+            HText {
+              anchors.right: parent.right
+              y: histFoot.y
+              text: "SINCE " + beacons.clock(history.st.first)
+              color: beacons.dim; font.pixelSize: 8
             }
           }
         }
