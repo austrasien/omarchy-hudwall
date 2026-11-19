@@ -8,7 +8,7 @@ shell on the Bottom layer: above the wallpaper, under every window.
   dots heated by the bytes exchanged; it sweeps over the routes only when
   they do not all fit its visible face. Around it, today's 24 hours cut by
   application and the year, a tick a day.
-- **Prometheus** ([omarchy-prometheus](https://github.com/austrasien/omarchy-prometheus)):
+- **Prometheus** ([omarchy-prometheus](https://github.com/austrasien/omarchy-prometheus), 0.4.1 or later):
   level and XP, the medal rack, league race and rival, the season and its
   medal, quests and achievements, the session with its controls and
   challenges, caffeine and its effect on tokens, focus quality, ghost races
