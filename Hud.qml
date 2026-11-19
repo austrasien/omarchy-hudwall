@@ -44,6 +44,7 @@ Item {
 
   property string paletteFile: ""
   property int barIconsTest: 0
+  property int beaconPeek: -1
   HudPalette { id: theme; colorsFile: hud.paletteFile }
   readonly property color accent: theme.acc
   // On a low battery the HUD stays up but stops moving.
@@ -120,6 +121,7 @@ Item {
       animate: hud.active && !hud.lowPower
       cfg: hud.cfg
       pixelScale: hud.pixelScale
+      beaconPeek: hud.beaconPeek
     }
     SysRight {
       barIconsTest: hud.barIconsTest

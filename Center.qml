@@ -16,6 +16,7 @@ Item {
   property var cfg: ({})
   property real pixelScale: 1
   property bool wantsKeyboard: false
+  property int beaconPeek: -1
 
   readonly property var p: prom.p
   readonly property bool live: prom.live
@@ -175,11 +176,6 @@ Item {
         medals: center.p ? center.p.medals : []
         seasonMedals: center.p ? center.p.seasonMedals : []
       }
-      Annunciator {
-        width: parent.width
-        pal: center.pal; sys: center.sys
-        animate: center.animate
-      }
   }
 
   // ------------------------------------------------------------ rings & globe
@@ -218,6 +214,16 @@ Item {
       })
       return out
     }
+  }
+  // The watched services, on the arc over the globe, just outside the months.
+  ServiceBeacons {
+    z: 6
+    anchors.fill: parent
+    pal: center.pal; sys: center.sys
+    animate: center.animate
+    cx: center.gx; cy: center.gy
+    radius: 264 * center.gs
+    peek: center.beaconPeek
   }
   HText {
     visible: !center.sys.peers.geo

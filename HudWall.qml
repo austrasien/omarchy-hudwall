@@ -295,6 +295,8 @@ Item {
     }
     // `barIconsTest N`: N dummy cells in the bar icons (to see its pages).
     function barIconsTest(n: string): string { hud.barIconsTest = parseInt(n) || 0; return String(hud.barIconsTest) }
+    // `beacon N`: the data card of service beacon N, as a hover would; -1 closes it.
+    function beacon(n: string): string { hud.beaconPeek = -1; hud.beaconPeek = parseInt(n); return String(hud.beaconPeek) }
     function hitTest(x: string, y: string): string { return hud.hitTest(Number(x), Number(y)) }
     function heraldTest(kind: string): string { return herald.test(kind) }
     function status(): string {
