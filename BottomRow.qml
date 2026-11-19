@@ -402,9 +402,18 @@ Item {
         // After the cutoff (8 h before bed): a red zone up to bedtime, the line.
         if (coffee.cutoffMs) {
           var cx = X(coffee.cutoffMs), bx = Math.min(width, X(coffee.bedMs))
-          ctx.fillStyle = row.pal.css(row.pal.alpha(row.pal.red, 0.10)); ctx.fillRect(cx, 0, Math.max(0, bx - cx), height - 10)
+          ctx.fillStyle = row.pal.css(row.pal.alpha(row.pal.red, 0.16)); ctx.fillRect(cx, 0, Math.max(0, bx - cx), height - 10)
           ctx.setLineDash([3, 2]); ctx.strokeStyle = row.pal.css(row.pal.alpha(row.pal.red, 0.8)); ctx.lineWidth = 1
           ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, height - 10); ctx.stroke(); ctx.setLineDash([])
+          // The cutoff hour on the curve itself, by the line (left of it
+          // when the line is too close to the right edge).
+          ctx.font = "8px monospace"; ctx.textBaseline = "top"
+          ctx.fillStyle = row.pal.css(row.pal.red)
+          var cutTxt = row.clock(coffee.cutoffMs)
+          var cutLeft = cx + 3 + ctx.measureText(cutTxt).width > width
+          ctx.textAlign = cutLeft ? "right" : "left"
+          ctx.fillText(cutTxt, cutLeft ? cx - 3 : cx + 3, 1)
+          ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"
         }
         var nowX = X(cdata.now)
         ctx.strokeStyle = row.pal.css(row.pal.alpha(row.pal.fg, 0.3)); ctx.beginPath(); ctx.moveTo(nowX, 0); ctx.lineTo(nowX, height - 10); ctx.stroke()
