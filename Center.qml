@@ -226,6 +226,7 @@ Item {
     cx: center.gx; cy: center.gy
     radius: 264 * center.gs
     peek: center.beaconPeek
+    beat: center.beat
   }
   HText {
     visible: !center.sys.peers.geo

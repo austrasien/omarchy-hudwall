@@ -93,7 +93,9 @@ west-south-west to east-south-east. A service that answers is a plain dot
 dark, the colour of the rings' idle arcs (only what goes wrong stands out); amber: slow, or a
 certificate expiring within 14 days; red, with the two rings of a ping: down.
 A hollow grey ring: the watcher cannot tell (`NO LINK`, `NO TAILNET`) or cannot
-be read. Hovering a beacon locks a data card onto it, the day tape's way
+be read. One beacon at a time sends out two spreading rings, then a pause,
+then the next, first to last and back (2.5 s each, on the HUD's clock: no
+frame of its own). Hovering a beacon locks a data card onto it, the day tape's way
 (wipe, closing brackets, scan line, typed text on a worn tape): target,
 state and since when, latency, HTTP status, certificate, last check, error,
 and the ping history of the last checks (a bar each, red when failed) with

@@ -78,6 +78,22 @@ Item {
   // ------------------------------------------------------------ beacons
 
   property int hoveredIndex: -1
+
+  // One beacon at a time sends out waves, then a pause, then the next one,
+  // first to last and back, on the HUD's 8 Hz clock (Hud.qml): it changes the
+  // beacons only on frames the HUD draws anyway, so it costs no frame. Each
+  // beacon has a slot of 20 beats (2.5 s): two rings, 4 beats apart, each
+  // spreading over 8 beats, then the pause. -1 (no clock): no waves.
+  property int beat: -1
+  readonly property int waveSlot: 20
+  readonly property int waveIndex: {
+    var n = list.length
+    if (beat < 0 || !animate || n === 0) return -1
+    if (n === 1) return 0
+    var s = Math.floor(beat / waveSlot) % (2 * (n - 1))
+    return s <= n - 1 ? s : 2 * (n - 1) - s
+  }
+  readonly property int waveT: beat < 0 ? -1 : beat % waveSlot
   // For testing: a beacon's card shown as a hover would (-1 closes it).
   property int peek: -1
   onPeekChanged: hoveredIndex = peek
@@ -97,6 +113,8 @@ Item {
       // Answering: dark, the colour of the rings' idle arcs (Rings.qml), so
       // only what goes wrong stands out.
       readonly property bool calm: modelData.state === "up"
+      // Where this beacon's waves are (beats since they started), -1 if not its turn.
+      readonly property int wave: beacons.waveIndex === index ? beacons.waveT : -1
       readonly property bool hot: beacons.hoveredIndex === index
 
       x: beacons.cx + beacons.radius * Math.cos(ang) - width / 2
@@ -115,6 +133,22 @@ Item {
           color: "transparent"
           border.width: 1
           border.color: beacons.pal.alpha(beacons.pal.red, index ? 0.35 : 0.7)
+        }
+      }
+      // Its waves, when it is its turn: two rings spreading and fading, one
+      // step a beat.
+      Repeater {
+        model: 2
+        Rectangle {
+          required property int index
+          readonly property int step: beacon.wave - index * 4
+          visible: step >= 0 && step < 8
+          anchors.centerIn: parent
+          width: 8 + Math.max(0, step) * 2.6; height: width; radius: width / 2
+          color: "transparent"
+          border.width: 1
+          border.color: beacon.calm ? beacons.pal.acc : beacon.tint
+          opacity: 0.85 * (1 - Math.max(0, step) / 8)
         }
       }
       // A faint halo, and a target ring while hovered.
