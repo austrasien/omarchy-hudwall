@@ -158,11 +158,11 @@ redraw the whole HUD at 60 fps for as long as it runs: with the league
 glint, the season ribbon's shine, the ghosts' float and the CPU threads'
 easing it was at 60 fps all the time, about 60 % of a core. What keeps
 moving now steps on one 8 Hz clock (`beat` in Hud.qml), on the same frames:
-the globe, the ghosts, the league glint (every 8 s), the season shine (a
-sweep every 12 s: its layer effect costs two frames a step), and the
-collector's readings, applied on the next beat; data-driven bars no longer
-ease. About 11 frames a second, 19 % of a core for the whole shell
-(measured 2026-11-19 with `frames` below). A new animation should step on
+the globe, the ghosts, the league glint (every 8 s), the season shine
+(without the medal's layer effect, neutral here, whose blur took two frames
+a step), and the collector's readings, applied on the next beat;
+data-driven bars no longer ease. About 9 frames a second, 16 % of a core for
+the whole shell (measured 2026-11-19 with `frames` below). A new animation should step on
 `beat` rather than loop or ease.
 
 `omarchy-shell austraz.hudwall frames` gives the frames drawn so far; twice

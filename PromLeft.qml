@@ -314,11 +314,11 @@ Item {
           bars: got >= 1 ? 2 : 1
           // Always in its colours: it is the medal to aim for.
           won: true
-          // Its holographic shine: one 3.2 s sweep every 12 s on the HUD's
-          // 8 Hz clock, still in between. Running on its own it redrew the
-          // HUD at 60 fps; even stepped all the time it cost some 13 frames a
-          // second (its layer effect redraws over two frames).
-          phaseOverride: col.beat % 96 < 26 ? (col.beat % 96) / 26 : 0
+          // Its holographic shine, a 3.2 s sweep on the HUD's 8 Hz clock.
+          // Without its layer effect (neutral here: always won, never
+          // hovered), whose blur redrew over two frames at every step.
+          phaseOverride: (col.beat / 8 / 3.2) % 1
+          effects: false
           colors: seasonPanel.s ? seasonPanel.s.colors : null
           size: 2.2
         }
