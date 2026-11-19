@@ -83,7 +83,7 @@ details. Names are best kept short (seven letters).
 The beacons sit on the arc over the globe, just outside the months, from
 west-south-west to east-south-east. A service that answers is a plain dot
 in the HUD's accent (the colour of the panels' titles); amber: slow, or a
-certificate expiring within 14 days; red, sending out pings: failed twice
+certificate expiring within 14 days; red, with the two rings of a ping: failed twice
 in a row (a first failure is checked again 10 s later). A hollow grey ring
 is not an outage: `NO LINK` when this machine cannot reach the Internet
 either (a connect to 1.1.1.1:443 fails too), `NO TAILNET` for a Tailscale

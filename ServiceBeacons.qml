@@ -82,12 +82,14 @@ Item {
   property int peek: -1
   onPeekChanged: hoveredIndex = peek
 
+  // By count, not by the list: a new reading (a new list) then updates the
+  // beacons in place instead of rebuilding them.
   Repeater {
-    model: beacons.list
+    model: beacons.list.length
     delegate: Item {
       id: beacon
-      required property var modelData
       required property int index
+      readonly property var modelData: beacons.list[index] || ({})
       readonly property real ang: beacons.angleOf(index)
       readonly property color tint: beacons.tint(modelData)
       readonly property bool down: modelData.state === "down"
@@ -98,24 +100,18 @@ Item {
       y: beacons.cy + beacons.radius * Math.sin(ang) - height / 2
       width: 22; height: 22
 
-      // A ping going out of a service that is down.
-      Rectangle {
-        id: ping
-        anchors.centerIn: parent
-        width: 10; height: 10; radius: 5
-        color: "transparent"
-        border.width: 1.2
-        border.color: beacons.pal.red
-        visible: beacon.down && beacons.animate
-        opacity: 0
-        SequentialAnimation {
-          running: ping.visible
-          loops: Animation.Infinite
-          ParallelAnimation {
-            NumberAnimation { target: ping; property: "scale"; from: 1; to: 3; duration: 1100; easing.type: Easing.OutCubic }
-            NumberAnimation { target: ping; property: "opacity"; from: 0.9; to: 0; duration: 1100; easing.type: Easing.OutCubic }
-          }
-          PauseAnimation { duration: 500 }
+      // A service that is down: a ping frozen on its way out, two red rings.
+      // Still on purpose: every frame of the HUD costs (a moving ping, even
+      // at three steps a second, took a quarter of a core).
+      Repeater {
+        model: beacon.down ? 2 : 0
+        Rectangle {
+          required property int index
+          anchors.centerIn: parent
+          width: 14 + index * 7; height: width; radius: width / 2
+          color: "transparent"
+          border.width: 1
+          border.color: beacons.pal.alpha(beacons.pal.red, index ? 0.35 : 0.7)
         }
       }
       // A faint halo, and a target ring while hovered.
@@ -352,10 +348,10 @@ Item {
           }
           ScaleLine {}
           Repeater {
-            model: card.rows
+            model: card.rows.length
             delegate: Row {
-              required property var modelData
               required property int index
+              readonly property var modelData: card.rows[index] || ["", ""]
               width: body.width
               spacing: 6
               HText {
@@ -407,10 +403,10 @@ Item {
               readonly property real peak: Math.max(low + 20, history.st.p90 * 1.5)
               Rectangle { y: parent.height - 1; width: parent.width; height: 1; color: beacons.dim; opacity: 0.6 }
               Repeater {
-                model: history.hist
+                model: history.n
                 delegate: Rectangle {
-                  required property var modelData
                   required property int index
+                  readonly property var modelData: history.hist[index] || [0, 0, "u"]
                   readonly property bool failed: modelData[2] === "d"
                   x: chart.width - (history.n - index) * chart.step
                   width: Math.max(1, chart.step - 0.6)

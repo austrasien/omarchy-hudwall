@@ -657,6 +657,7 @@ class Uptime:
     POKE = os.path.join(STATE, "uptime.poke")
     REFERENCE = ("1.1.1.1", 443)
     HIST = 120           # checks kept per service: [time, ms or None, "u"|"s"|"d"]
+    _tls = None          # one TLS context for all checks (loading the CAs costs)
 
     def __init__(self):
         import threading
@@ -690,7 +691,9 @@ class Uptime:
             if isinstance(t, dict) and t.get("name") and (t.get("url") or t.get("tcp")):
                 targets.append(t)
         with self.lock:
-            self.targets = targets
+            if targets != self.targets:
+                self.targets = targets
+                self.version += 1        # the HUD gets the new list at once
 
     @staticmethod
     def tcp(host, port, timeout=4):
@@ -708,7 +711,9 @@ class Uptime:
         u = urllib.parse.urlsplit(url)
         t = time.time()
         if u.scheme == "https":
-            conn = http.client.HTTPSConnection(u.hostname, u.port or 443, timeout=timeout, context=ssl.create_default_context())
+            if Uptime._tls is None:
+                Uptime._tls = ssl.create_default_context()
+            conn = http.client.HTTPSConnection(u.hostname, u.port or 443, timeout=timeout, context=Uptime._tls)
         else:
             conn = http.client.HTTPConnection(u.hostname, u.port or 80, timeout=timeout)
         try:
@@ -761,15 +766,19 @@ class Uptime:
                 self.due = {}
             todo = [t for t in targets if self.due.get(t["name"], 0) <= now]
             if todo:
-                link, tail = None, None
                 for t in todo:
-                    every = t.get("every", 30 if t.get("url") else 300)
-                    self.due[t["name"]] = now + every
-                    host = (t.get("tcp") or "").rpartition(":")[0]
-                    is_tail = host.startswith("100.") or host.endswith(".ts.net") or ".ts.net" in (t.get("url") or "")
-                    state, ms, code, cert, err = self.check(t)
+                    self.due[t["name"]] = now + t.get("every", 30 if t.get("url") else 300)
+                # All due checks at once: a dead target's timeout holds no other.
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=min(8, len(todo))) as pool:
+                    results = list(pool.map(self.check, todo))
+                # A failure is judged once for the batch: is it this machine?
+                link, tail = None, None
+                batch = []
+                for t, (state, ms, code, cert, err) in zip(todo, results):
                     if state == "down":
-                        if is_tail:
+                        host = (t.get("tcp") or "").rpartition(":")[0]
+                        if host.startswith("100.") or host.endswith(".ts.net") or ".ts.net" in (t.get("url") or ""):
                             tail = self.tailnet_up() if tail is None else tail
                             if not tail:
                                 state, err = "off", "Tailscale is not running"
@@ -782,31 +791,37 @@ class Uptime:
                                     link = False
                             if not link:
                                 state, err = "nolink", "no Internet from this machine"
-                    self.record(t["name"], state, ms, code, cert, err)
-                    if state == "down" and self.state[t["name"]]["state"] != "down":
-                        self.due[t["name"]] = time.time() + 10      # confirm soon
+                    batch.append((t["name"], state, ms, code, cert, err))
+                self.record(batch)
+                for name, state, *_ in batch:
+                    if state == "down" and self.state[name]["state"] != "down":
+                        self.due[name] = time.time() + 10      # confirm soon
             time.sleep(1)
 
-    def record(self, name, state, ms, code, cert, err):
+    def record(self, batch):
         now = round(time.time())
         with self.lock:
-            s = self.state.setdefault(name, {"state": "wait", "since": now, "fails": 0})
-            # The history keeps every real answer or failure, doubts included;
-            # NO LINK and OFF say nothing of the service and are left out.
-            if state in ("up", "slow", "down"):
-                s["hist"] = (s.get("hist") or [])[-(self.HIST - 1):] + [[now, ms, state[0]]]
-            # One failure is a doubt: the tile keeps its state until the next.
-            if state == "down":
-                s["fails"] = s.get("fails", 0) + 1
-                if s["fails"] < 2 and s["state"] not in ("wait", "down"):
-                    state = s["state"]
-            else:
-                s["fails"] = 0
-            if s["state"] != state:
-                s["state"], s["since"] = state, now
-            s.update({"ms": ms, "code": code, "cert": cert if cert is not None else s.get("cert"), "err": err, "checked": now})
+            for name, state, ms, code, cert, err in batch:
+                self._record(now, name, state, ms, code, cert, err)
             self.version += 1
         self.save()
+
+    def _record(self, now, name, state, ms, code, cert, err):
+        s = self.state.setdefault(name, {"state": "wait", "since": now, "fails": 0})
+        # The history keeps every real answer or failure, doubts included;
+        # NO LINK and OFF say nothing of the service and are left out.
+        if state in ("up", "slow", "down"):
+            s["hist"] = (s.get("hist") or [])[-(self.HIST - 1):] + [[now, ms, state[0]]]
+        # One failure is a doubt: the tile keeps its state until the next.
+        if state == "down":
+            s["fails"] = s.get("fails", 0) + 1
+            if s["fails"] < 2 and s["state"] not in ("wait", "down"):
+                state = s["state"]
+        else:
+            s["fails"] = 0
+        if s["state"] != state:
+            s["state"], s["since"] = state, now
+        s.update({"ms": ms, "code": code, "cert": cert if cert is not None else s.get("cert"), "err": err, "checked": now})
 
     def save(self):
         with self.lock:
@@ -820,8 +835,11 @@ class Uptime:
         except OSError:
             pass
 
-    def sample(self):
+    def sample(self, seen=None):
+        """(version, services), or (version, None) when nothing changed since `seen`."""
         with self.lock:
+            if self.version == seen:
+                return seen, None
             out = []
             for t in self.targets:
                 s = self.state.get(t["name"], {"state": "wait"})
@@ -906,9 +924,8 @@ def main():
             npu_read, npu_dirty = now, False
             if d is not None:
                 out["npuDay"] = d
-        version, targets = uptime.sample()
-        if version != uptime_sent or tick % 30 == 0:
-            uptime_sent = version
+        uptime_sent, targets = uptime.sample(uptime_sent)
+        if targets is not None:
             out["uptime"] = targets
         if tick % 300 == 0 and bat_name:
             out["batDay"] = battery_day(bat_name)
