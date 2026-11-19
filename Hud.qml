@@ -50,6 +50,12 @@ Item {
   // On a low battery the HUD stays up but stops moving.
   readonly property bool lowPower: sys.bat.status === "Discharging" && sys.bat.pct !== undefined && sys.bat.pct <= 15
   Sys { id: sys; active: hud.active }
+  // The HUD's one clock for whatever keeps moving (the globe's sweep, the
+  // season ribbon's shine, the ghosts): eight steps a second, all on the
+  // same frames. Any running Qt animation, a pause included, would redraw
+  // the whole HUD at 60 fps for as long as it runs.
+  property int beat: 0
+  Timer { interval: 125; repeat: true; running: hud.active && !hud.lowPower; onTriggered: hud.beat++ }
   Prom { id: prom; active: hud.active }
   // For development: the chain of topmost items at a screen point.
   function hitTest(x, y) {
@@ -106,6 +112,7 @@ Item {
     }
 
     PromLeft {
+      beat: hud.beat
       mark: hud.cfg.mark || null
       x: hud.mL; y: hud.edge
       width: hud.colW
@@ -113,6 +120,7 @@ Item {
     }
     Center {
       id: center
+      beat: hud.beat
       x: hud.centerX; y: hud.edge
       width: hud.centerW
       height: hud.bottomY - hud.edge - 10
@@ -132,6 +140,7 @@ Item {
     }
     BottomRow {
       id: bottomRow
+      beat: hud.beat
       x: hud.mL; y: hud.bottomY
       width: hud.avail
       pal: theme; sys: sys; prom: prom

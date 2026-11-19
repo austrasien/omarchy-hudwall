@@ -8,6 +8,7 @@ Item {
   required property var pal
   required property var sys
   required property var prom
+  property int beat: 0            // the HUD's 8 Hz clock (Hud.qml)
   property real pixelScale: 1
 
   width: 1232
@@ -92,6 +93,7 @@ Item {
       finishV: ghost.at(ghost.best, ghost.best.length - 1)
       format: function(v) { return row.hm(v * 3600) }
       animate: row.prom.active
+      beat: row.beat
     }
     GhostLane {
       y: 70; width: parent.width
@@ -103,6 +105,7 @@ Item {
       finishV: ghost.at(ghost.tBest, ghost.tBest.length - 1)
       format: function(v) { return row.tokens(v) }
       animate: row.prom.active
+      beat: row.beat
     }
   }
 

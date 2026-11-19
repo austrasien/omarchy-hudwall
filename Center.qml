@@ -16,6 +16,7 @@ Item {
   property var cfg: ({})
   property real pixelScale: 1
   property bool wantsKeyboard: false
+  property int beat: 0            // the HUD's 8 Hz clock (Hud.qml)
   property int beaconPeek: -1
 
   readonly property var p: prom.p
@@ -199,6 +200,7 @@ Item {
     scale: center.gs
     active: center.animate
     fps: center.cfg.fps || 24
+    beat: center.beat
     home: center.cfg.home || [0, 51.48]
     // The last peers, plus the places named in the config ({ name: [lon, lat] }),
     // lit when Tailscale sees that host online.

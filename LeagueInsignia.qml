@@ -12,7 +12,11 @@ Canvas {
   property bool animate: true
 
   readonly property bool metal: league <= 2
-  property real glint: -1
+  // A glint every 8 s, swept in nine steps on the HUD's 8 Hz clock (`beat`):
+  // a Qt animation, its pause included, would redraw the whole HUD at 60 fps.
+  // Without a clock (beat -1), no glint.
+  property int beat: -1
+  readonly property real glint: animate && beat >= 0 && beat % 65 < 9 ? (beat % 65) / 8 : -1
 
   ShapeOf { id: shape; league: ins.league }
 
@@ -22,13 +26,6 @@ Canvas {
   onWidthChanged: requestPaint()
   Component.onCompleted: requestPaint()
 
-  SequentialAnimation {
-    running: ins.animate && ins.visible
-    loops: Animation.Infinite
-    PauseAnimation { duration: 7000 }
-    NumberAnimation { target: ins; property: "glint"; from: 0; to: 1; duration: 1100; easing.type: Easing.InOutQuad }
-    ScriptAction { script: ins.glint = -1 }
-  }
 
   function css(c, k) {
     var r = Math.max(0, Math.min(255, Math.round(c.r * 255 * k)))

@@ -169,6 +169,11 @@ Item {
     }
   }
 
+  // Frames drawn (IPC `frames`). Any running Qt animation, a pause included,
+  // redraws the whole HUD at 60 fps: what keeps moving steps on Hud.beat.
+  property int frameCount: 0
+  Connections { target: hud.Window.window; function onFrameSwapped() { root.frameCount++ } }
+
   // While the HUD shows, the hidden bar opens its widgets' panels beside the
   // HUD's bar icons widget (see austraz.bar's hudDock).
   readonly property string dockJson: active && hud.width > 0 ? JSON.stringify(hud.barDock) : ""
@@ -299,6 +304,9 @@ Item {
     function beacon(n: string): string { hud.beaconPeek = -1; hud.beaconPeek = parseInt(n); return String(hud.beaconPeek) }
     function hitTest(x: string, y: string): string { return hud.hitTest(Number(x), Number(y)) }
     function heraldTest(kind: string): string { return herald.test(kind) }
+    // For development: frames drawn so far; twice, a few seconds apart, gives
+    // the frame rate (0 while hidden, about 8-10 while shown).
+    function frames(): string { return String(root.frameCount) }
     function status(): string {
       return JSON.stringify({ active: root.active, deskEmpty: root.deskEmpty, workspace: root.shownWorkspace, preview: root.previewOpen })
     }

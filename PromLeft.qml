@@ -9,6 +9,7 @@ Item {
 
   required property var pal
   required property var prom
+  property int beat: 0            // the HUD's 8 Hz clock (Hud.qml)
   required property var sys
   property var mark: null
   readonly property var p: prom.p
@@ -70,6 +71,7 @@ Item {
         league: leaguePanel.lg && leaguePanel.lg.league !== undefined ? leaguePanel.lg.league : 0
         color: leaguePanel.lg ? leaguePanel.lg.color : col.pal.cyan
         animate: col.prom.active
+        beat: col.beat
       }
       Column {
         spacing: 2
@@ -312,6 +314,9 @@ Item {
           bars: got >= 1 ? 2 : 1
           // Always in its colours: it is the medal to aim for.
           won: true
+          // Its holographic shine, a 3.2 s sweep on the HUD's 8 Hz clock:
+          // running on its own it redraws the HUD at 60 fps.
+          phaseOverride: (col.beat / 8 / 3.2) % 1
           colors: seasonPanel.s ? seasonPanel.s.colors : null
           size: 2.2
         }

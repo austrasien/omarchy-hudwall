@@ -161,6 +161,18 @@ while it turns): with the HUD on screen the shell then costs about 2 % of a
 core more than with it hidden. The collector reads the battery every 5 s and
 the NPU journal only after the NPU served requests.
 
+Any running Qt animation, a pause in a looping one included, makes Qt
+redraw the whole HUD at 60 fps for as long as it runs: with the league
+glint, the season ribbon's shine and the ghosts' float it was at 60 fps all
+the time, about 45 % of a core more than hidden. Everything that keeps
+moving now steps on one 8 Hz clock (`beat` in Hud.qml), on the same frames,
+and the globe's sweep too: about 18 frames a second, 30 % of a core for the
+whole shell (measured 2026-11-19, with `frames` below). A new animation
+should step on `beat` rather than loop.
+
+`omarchy-shell austraz.hudwall frames` gives the frames drawn so far; twice
+a few seconds apart, the frame rate.
+
 On battery at 15 % or less, the HUD stops moving.
 
 ## Layout

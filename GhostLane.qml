@@ -16,6 +16,10 @@ Item {
   property real finishV: 0        // the record day's total
   property var format: function(v) { return String(Math.round(v)) }
   property bool animate: false
+  // The ghost's float and the tip's breath move on the HUD's 8 Hz clock: a
+  // smooth animation would redraw the whole HUD at 60 fps for as long as it
+  // shows.
+  property int beat: 0
 
   readonly property real gap: nowV - ghostV
   readonly property bool ahead: gap >= 0
@@ -93,15 +97,12 @@ Item {
     }
     HText {
       id: ghostMark
-      x: lane.px(lane.ghostV) - width / 2; y: -3
+      x: lane.px(lane.ghostV) - width / 2
+      // Floats up and down by 2 units over 2.2 s, in steps (see `beat`).
+      y: lane.animate ? -4 - Math.sin(lane.beat * 2 * Math.PI / 17.6) : -3
       text: lane.g(0xF02A0)
       color: lane.ghostColor; font.pixelSize: 13
       opacity: 0.85
-      SequentialAnimation on y {
-        running: lane.animate; loops: Animation.Infinite
-        NumberAnimation { from: -3; to: -5; duration: 1100; easing.type: Easing.InOutSine }
-        NumberAnimation { from: -5; to: -3; duration: 1100; easing.type: Easing.InOutSine }
-      }
     }
     // Yesterday: a small diamond under the line.
     Rectangle {
@@ -124,11 +125,8 @@ Item {
       x: lane.px(lane.nowV) - width / 2; y: parent.height / 2 - height / 2
       width: 14; height: 14; radius: 7
       color: lane.pal.alpha(lane.you, 0.25)
-      SequentialAnimation on scale {
-        running: lane.animate; loops: Animation.Infinite
-        NumberAnimation { from: 0.7; to: 1.25; duration: 900; easing.type: Easing.OutSine }
-        NumberAnimation { from: 1.25; to: 0.7; duration: 900; easing.type: Easing.InSine }
-      }
+      // Breathes over 1.8 s, in steps (see `beat`).
+      scale: lane.animate ? 0.975 + 0.275 * Math.sin(lane.beat * 2 * Math.PI / 14.4) : 1
     }
     Rectangle {
       x: lane.px(lane.nowV) - 3.5; y: parent.height / 2 - 3.5
